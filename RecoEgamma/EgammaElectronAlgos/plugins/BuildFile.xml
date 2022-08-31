@@ -34,9 +34,10 @@
 <use name="FWCore/PluginManager"/>
 <use name="HeterogeneousCore/CUDAUtilities"/>
 <use name="HeterogeneousCore/CUDACore"/>
-<library file="*.cc *.cu" name="RecoEgammaEgammaElectronProducersPlugins">
+<library file="*.cu" name="RecoEgammaEgammaElectronAlgosPlugins">
   <flags EDM_PLUGIN="1"/>
 </library>
+
 
 
 

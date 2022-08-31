@@ -17,6 +17,8 @@
 
 #include "FWCore/Framework/interface/ConsumesCollector.h"
 
+//#include "RecoEgamma/EgammaElectronAlgos/interface/TrajSeedMatcherCUDA.h"
+
 constexpr float TrajSeedMatcher::kElectronMass_;
 
 namespace {
@@ -150,6 +152,7 @@ edm::ParameterSetDescription TrajSeedMatcher::makePSetDescription() {
   defaults.addParameter<std::vector<double> >("dRZMaxLowEt", std::vector<double>{0.09, 0.09, 0.09});
   defaults.addParameter<int>("version", 1);
   desc.addVPSet("matchingCuts", cutsDesc, std::vector<edm::ParameterSet>{defaults, defaults, defaults});
+
   return desc;
 }
 
@@ -161,6 +164,15 @@ std::vector<TrajSeedMatcher::SeedWithInfo> TrajSeedMatcher::operator()(const Glo
   //these are super expensive functions
   TrajectoryStateOnSurface scTrajStateOnSurfNeg = makeTrajStateOnSurface(candPos, energy, -1);
   TrajectoryStateOnSurface scTrajStateOnSurfPos = makeTrajStateOnSurface(candPos, energy, 1);
+
+  // Algo deconstruction
+  std::cout<<" scTrajStateOnSurfNeg.globalDirection : "<< scTrajStateOnSurfNeg.globalDirection() <<std::endl;
+  std::cout<<" scTrajStateOnSurfNeg.globalPosition : "<< scTrajStateOnSurfNeg.globalPosition() <<std::endl;
+  std::cout<<" scTrajStateOnSurfNeg.globalMomentum : "<< scTrajStateOnSurfNeg.globalMomentum() <<std::endl;
+  std::cout<<" scTrajStateOnSurfNeg.transverseCurvature() : "<< scTrajStateOnSurfNeg.transverseCurvature() <<std::endl;
+  std::cout<<" scTrajStateOnSurfNeg.localPosition : "<< scTrajStateOnSurfNeg.localPosition() <<std::endl;
+  std::cout<<" scTrajStateOnSurfNeg.surface : "<< scTrajStateOnSurfNeg.surface() <<std::endl;
+
 
   for (const auto& seed : seeds_) {
     std::vector<SCHitMatch> matchedHitsNeg = processSeed(seed, candPos, energy, scTrajStateOnSurfNeg);
@@ -214,6 +226,8 @@ std::vector<TrajSeedMatcher::SCHitMatch> TrajSeedMatcher::processSeed(const Traj
     if (!recHit.isValid()) {
       continue;
     }
+
+    //std::cout<<" recHit.hit.det()->surface() "<< recHit.det()->surface() <<std::endl;
 
     const bool doFirstMatch = matches.empty();
 
@@ -399,12 +413,14 @@ float TrajSeedMatcher::MatchingCutsV1::getDRZCutValue(const float scEt, const fl
   if (scEt >= dRZMaxLowEtThres_)
     return dRZMax_;
   else {
+    //std::cout<< " Testing : "<< DRZNamespace::DRZCutValue(dRZMaxLowEtEtaBins_,scEta)<<std::endl;
     const float absEta = std::abs(scEta);
     for (size_t etaNr = 0; etaNr < dRZMaxLowEtEtaBins_.size(); etaNr++) {
       if (absEta < dRZMaxLowEtEtaBins_[etaNr])
         return dRZMaxLowEt_[etaNr];
     }
     return dRZMaxLowEt_.back();
+    
   }
 }
 

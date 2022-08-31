@@ -35,9 +35,20 @@
 
 #include "RecoEgamma/EgammaElectronAlgos/interface/TrajSeedMatcher.h"
 
-class ElectronNHitSeedProducer : public edm::global::EDProducer<> {
+
+#include <cuda_runtime.h>
+
+#include "HeterogeneousCore/CUDAUtilities/interface/host_unique_ptr.h"
+#include "HeterogeneousCore/CUDAUtilities/interface/device_unique_ptr.h"
+#include "HeterogeneousCore/CUDAUtilities/interface/host_noncached_unique_ptr.h"
+#include "HeterogeneousCore/CUDAUtilities/interface/cudaCheck.h"
+
+#include "RecoEgamma/EgammaElectronProducers/interface/TestCUDA.h"
+#include "DataFormats/EgammaReco/interface/EcalSCHeterogeneous.h"
+
+class ElectronNHitSeedProducerCUDA : public edm::global::EDProducer<> {
 public:
-  explicit ElectronNHitSeedProducer(const edm::ParameterSet&);
+  explicit ElectronNHitSeedProducerCUDA(const edm::ParameterSet&);
 
   void produce(edm::StreamID, edm::Event&, const edm::EventSetup&) const final;
 
@@ -76,9 +87,12 @@ namespace {
     return pmVars;
   }
 
+  // GPU related vars 
+  //ElectronSeedCUDA::ElectronSeedParameters eParams;
+
 }  // namespace
 
-ElectronNHitSeedProducer::ElectronNHitSeedProducer(const edm::ParameterSet& pset)
+ElectronNHitSeedProducerCUDA::ElectronNHitSeedProducerCUDA(const edm::ParameterSet& pset)
     : matcherConfiguration_(pset.getParameter<edm::ParameterSet>("matcherConfig"), consumesCollector()),
       initialSeedsToken_(consumes(pset.getParameter<edm::InputTag>("initialSeeds"))),
       verticesToken_(consumes(pset.getParameter<edm::InputTag>("vertices"))),
@@ -91,7 +105,7 @@ ElectronNHitSeedProducer::ElectronNHitSeedProducer(const edm::ParameterSet& pset
   }
 }
 
-void ElectronNHitSeedProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void ElectronNHitSeedProducerCUDA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("initialSeeds", {"hltElePixelSeedsCombined"});
   desc.add<edm::InputTag>("vertices", {});
@@ -100,14 +114,49 @@ void ElectronNHitSeedProducer::fillDescriptions(edm::ConfigurationDescriptions& 
   desc.add<std::vector<edm::InputTag>>("superClusters", {{"hltEgammaSuperClustersToPixelMatch"}});
   desc.add<edm::ParameterSetDescription>("matcherConfig", TrajSeedMatcher::makePSetDescription());
 
-  descriptions.add("electronNHitSeedProducer", desc);
+  descriptions.add("ElectronNHitSeedProducerCUDA", desc);
 }
 
-void ElectronNHitSeedProducer::produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
+void ElectronNHitSeedProducerCUDA::produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
   auto const& trackerTopology = iSetup.getData(trackerTopologyToken_);
 
-  std::cout<<" I am in ElectronNHitSeedProducer::produce "<<std::endl;
   reco::ElectronSeedCollection eleSeeds{};
+  auto CPUbeta = cms::cuda::make_host_unique<double[]>(1, cudaStreamDefault);
+  //EgammaCUDA::hello_world_gpu_Wrapper();
+ 
+  // --------- SoA DataFormat building --------------- //
+
+  EcalSCHeterogeneous CPUecalSCs(cms::cuda::make_host_unique<EcalSC::EcalSCSoA>(cudaStreamDefault));
+  EcalSCHeterogeneous GPUecalSCs(cms::cuda::make_device_unique<EcalSC::EcalSCSoA>(cudaStreamDefault));
+
+  auto* CPUecalSCsObject = CPUecalSCs.get();
+  auto* GPUecalSCsObject = GPUecalSCs.get();
+
+  u_int16_t n_sc=0;
+  for (const auto& superClustersToken : superClustersTokens_) {
+    for (auto& superClusRef : iEvent.get(superClustersToken)) {
+      CPUecalSCsObject->scTheta(n_sc) = superClusRef->seed()->position().theta();
+      CPUecalSCsObject->scEta(n_sc) = superClusRef->seed()->position().eta();
+      CPUecalSCsObject->scEnergy(n_sc) = superClusRef->seed()->position().r();
+      CPUecalSCsObject->scR(n_sc) = superClusRef->energy();     
+      n_sc=n_sc+1;
+    }
+  }
+
+  std::cout<<" Number of SCs is : "<< n_sc <<std::endl;
+  std::cout<<" Finish from Host : "<<std::endl;
+  std::cout<<"sizeof(EcalSC::EcalSCSoA) : "<<sizeof(EcalSC::EcalSCSoA)<<std::endl;
+
+  // --------- Copy list of SoA SCs on the device -----//
+  cudaCheck(cudaMemcpy(GPUecalSCsObject, CPUecalSCsObject, sizeof(EcalSC::EcalSCSoA), cudaMemcpyHostToDevice));
+  cudaError_t error = cudaGetLastError();
+  if (error != cudaSuccess) {
+      fprintf(stderr, "ERROR: %s \n", cudaGetErrorString(error));
+  }
+  EgammaCUDA::ecalScWrapper(n_sc,GPUecalSCsObject,cudaStreamDefault);
+  //cudaCheck(cudaFree(GPUecalSCsObject));
+  // ------------------------------------------------- //
+
 
   TrajSeedMatcher matcher{iEvent.get(initialSeedsToken_),
                           iEvent.get(beamSpotToken_).position(),
@@ -115,21 +164,24 @@ void ElectronNHitSeedProducer::produce(edm::StreamID, edm::Event& iEvent, const 
                           iSetup,
                           iEvent.get(measTkEvtToken_)};
 
+  int counter = 0;
+  for (auto& superClusRef : iEvent.get(initialSeedsToken_)) {
+    ++counter;
+  }  
+  std::cout<<" Iniitial seeds : "<<counter <<std::endl;
+
   // Loop over all super-cluster collections (typically barrel and forward are supplied separately)
   for (const auto& superClustersToken : superClustersTokens_) {
     for (auto& superClusRef : iEvent.get(superClustersToken)) {
-      //the eta of the supercluster when mustache clustered is slightly biased due to bending in magnetic field
-      //the eta of its seed cluster is a better estimate of the orginal position
+
       GlobalPoint caloPosition(GlobalPoint::Polar(superClusRef->seed()->position().theta(),  //seed theta
                                                   superClusRef->position().phi(),            //supercluster phi
                                                   superClusRef->position().r()));            //supercluster r
-
+      int number = 0;
       for (auto const& matchedSeed : matcher(caloPosition, superClusRef->energy())) {
-        reco::ElectronSeed eleSeed(matchedSeed.seed);
-			//charis
 
-			std::cout<<	"  eleSeed :  "<< eleSeed.isEcalDriven() <<std::endl;
-	
+        ++number;
+        reco::ElectronSeed eleSeed(matchedSeed.seed);
         reco::ElectronSeed::CaloClusterRef caloClusRef(superClusRef);
         eleSeed.setCaloCluster(caloClusRef);
         eleSeed.setNrLayersAlongTraj(matchedSeed.nrValidLayers);
@@ -138,10 +190,12 @@ void ElectronNHitSeedProducer::produce(edm::StreamID, edm::Event& iEvent, const 
         }
         eleSeeds.emplace_back(eleSeed);
       }
+      std::cout<<"Number of seeds per SC "<< number <<std::endl;
     }
   }
+  
   iEvent.emplace(putToken_, std::move(eleSeeds));
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(ElectronNHitSeedProducer);
+DEFINE_FWK_MODULE(ElectronNHitSeedProducerCUDA);
