@@ -79440,7 +79440,6 @@ process.load('HeterogeneousCore.AlpakaCore.ProcessAcceleratorAlpaka_cfi')
 process.testSoA = cms.EDProducer( "SuperclusterCopyToDeviceProducer@alpaka",
     size = cms.int32( 42 ),
     getsuperclus = cms.VInputTag("hltEgammaSuperClustersToPixelMatch"),
-    seeds = cms.InputTag( "hltPixelTracksFromGPU" ),
 )
 
 

@@ -17,10 +17,10 @@ namespace pixelTrack {
 
 #ifdef GPU_SMALL_EVENTS
   // kept for testing and debugging
-  constexpr uint32_t maxNumber() { return 2 * 1024; }
+  constexpr uint32_t maxNumber() { return 1 * 1024; }
 #else
   // tested on MC events with 55-75 pileup events
-  constexpr uint32_t maxNumber() { return 32 * 1024; }
+  constexpr uint32_t maxNumber() { return 2 * 1024; }
 #endif
 
 }  // namespace pixelTrack

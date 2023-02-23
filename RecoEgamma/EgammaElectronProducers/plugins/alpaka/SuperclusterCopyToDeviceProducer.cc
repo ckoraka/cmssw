@@ -1,3 +1,5 @@
+#include <Eigen/Core>
+
 #include "DataFormats/Portable/interface/Product.h"
 #include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
@@ -24,6 +26,9 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaServices/interface/alpaka/AlpakaService.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/global/EDProducer.h"
+
+#include "DataFormats/Track/interface/TrackSoAHost.h" 
+#include "DataFormats/Track/interface/alpaka/TrackSoADevice.h"
 
 #include "SuperclusterAlgo.h"
 
@@ -81,8 +86,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			
 			alpaka::memcpy(event.queue(), deviceProduct.buffer(), hostProduct.buffer());
 
-			// run the algorithm
+			// Print the SoA from the device
 			algo_.print(event.queue(), deviceProduct);
+
+			// Create and fill the track SoA
+			TrackSoAHost<pixelTopology::Phase1> tracks_h{event.queue()};
+			TrackSoADevice<pixelTopology::Phase1> tracks_d{event.queue()};
+			FillTrackSoA trackSoA_{};
+			trackSoA_.fillTrackSoA(tracks_d.view(), event.queue());
 
 			event.emplace(deviceToken_, std::move(deviceProduct));
 
@@ -105,6 +116,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 		// Try and print out the device SoA elements
 		SuperclusterAlgo const algo_{};
+
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

@@ -4,6 +4,7 @@
 #endif
 
 #include <alpaka/alpaka.hpp>
+#include <Eigen/Core>
 
 #include "DataFormats/EgammaReco/interface/alpaka/SuperclusterDeviceCollection.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -11,7 +12,6 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
 // Includes to create and fill the dummy track SoA
-
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "DataFormats/Track/interface/PixelTrackDefinitions.h"
 #include "DataFormats/Track/interface/alpaka/TrackSoADevice.h"
@@ -24,29 +24,6 @@ using Quality = pixelTrack::Quality;
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   using namespace cms::alpakatools;
-
-	template <typename TrackerTraits>
-	class FillTrackSoA {
-	public:
-		template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
-		ALPAKA_FN_ACC void operator()(TAcc const& acc, TrackSoAView<TrackerTraits> tracks_view) const {
-			const int32_t i = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
-
-			if (i == 0) {
-				tracks_view.nTracks() = 420;
-			}
-
-			for (int32_t j : elements_with_stride(acc, tracks_view.metadata().size())) {
-				tracks_view[j].pt() = (float)j;
-				tracks_view[j].eta() = (float)j;
-				tracks_view[j].chi2() = (float)j;
-				tracks_view[j].quality() = (Quality)(j % 256);
-				tracks_view[j].nLayers() = j % 128;
-				tracks_view.hitIndices().off[j] = j;
-			}
-		}
-	};
-
 
   class SuperclusterAlgoKernel {
   public:
@@ -70,5 +47,40 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     auto workDiv = make_workdiv<Acc1D>(groups, items);
     alpaka::exec<Acc1D>(queue, workDiv, SuperclusterAlgoKernel{}, collection.view(), collection->metadata().size());
   }
+
+	template <typename TrackerTraits>
+	class FillTrackSoAKernel {
+	public:
+		template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+		ALPAKA_FN_ACC void operator()(TAcc const& acc, TrackSoAView<TrackerTraits> tracks_view) const {
+			const int32_t i = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
+
+			if (i == 0) {
+				tracks_view.nTracks() = 420;
+			}
+
+			for (int32_t j : elements_with_stride(acc, tracks_view.metadata().size())) {
+				tracks_view[j].pt() = (float)j;
+				tracks_view[j].eta() = (float)j;
+				tracks_view[j].chi2() = (float)j;
+				tracks_view[j].quality() = (Quality)(j % 256);
+				tracks_view[j].nLayers() = j % 128;
+				tracks_view.hitIndices().off[j] = j;
+			}
+
+			alpaka::syncBlockThreads(acc);
+			for (int32_t j : elements_with_stride(acc, tracks_view.metadata().size())) {
+        printf("Track pT : %f \n",tracks_view[j].pt());
+      }
+		}
+	};
+
+	//---- Fill the track SoA
+	void FillTrackSoA::fillTrackSoA(TrackSoAView<pixelTopology::Phase1> tracks_view, Queue& queue) {
+		uint32_t items = 64;
+		uint32_t groups = divide_up_by(tracks_view.metadata().size(), items);
+		auto workDiv = make_workdiv<Acc1D>(groups, items);
+		alpaka::exec<Acc1D>(queue, workDiv, FillTrackSoAKernel<pixelTopology::Phase1>{}, tracks_view);
+	}
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
