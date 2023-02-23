@@ -6,6 +6,7 @@
 #include <type_traits>
 #include "FWCore/Utilities/interface/HostDeviceConstant.h"
 
+
 namespace pixelTopology {
 
   constexpr auto maxNumberOfLadders = 160;
@@ -297,7 +298,7 @@ namespace pixelTopology {
     static constexpr uint32_t avgHitsPerTrack = 7;
     static constexpr uint32_t maxCellsPerHit = 256;
     static constexpr uint32_t avgTracksPerHit = 10;
-    static constexpr uint32_t maxNumberOfTuples = 256 * 1024;
+    static constexpr uint32_t maxNumberOfTuples = 32 * 8 ; // Charis : Made this smaller for testing purposes
     //this is well above thanks to maxNumberOfTuples
     static constexpr uint32_t maxHitsForContainers = avgHitsPerTrack * maxNumberOfTuples;
     static constexpr uint32_t maxNumberOfDoublets = 5 * 512 * 1024;
@@ -389,7 +390,7 @@ namespace pixelTopology {
     static constexpr uint32_t avgHitsPerTrack = 5;
     static constexpr uint32_t maxCellsPerHit = 256;
     static constexpr uint32_t avgTracksPerHit = 6;
-    static constexpr uint32_t maxNumberOfTuples = 32 * 1024;
+    static constexpr uint32_t maxNumberOfTuples = 32 * 8; // Charis : Made this snmaller for testing purposes
     static constexpr uint32_t maxHitsForContainers = avgHitsPerTrack * maxNumberOfTuples;
     static constexpr uint32_t maxNumberOfDoublets = 512 * 1024;
     static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 8;

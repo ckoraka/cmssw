@@ -25,6 +25,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   using namespace cms::alpakatools;
 
+	//--- Kernel for printing the SC SoA
   class SuperclusterAlgoKernel {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
@@ -41,6 +42,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
   };
 
+	//--- Kernel for performing the seed to SC match
+	class SeedToSuperClusterMatcher {
+  public:
+    template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  TrackSoAView<pixelTopology::Phase1> view,
+                                  int32_t size,
+                                  portableSuperclusterSoA::SuperclusterDeviceCollection::View viewSCs,
+                                  int32_t sizeSCs) const {
+
+      const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
+
+			printf("Printing from the SeedToSuperClusterMatcher kernel :");
+			// Strided loop over the seeds 
+			for(int32_t j : elements_with_stride(acc, view.metadata().size())) {
+        printf("Track pT : %f \n",view[j].pt());
+				for(int32_t i=0;i<=sizeSCs;++i){
+					printf("SC Energy : %f \n",viewSCs[i].scEnergy());
+					// Algo implementation should go here :
+					//
+				}
+      }
+
+    }
+  };
+
+	//---- Kernel launch for printing the SC SoA collection
   void SuperclusterAlgo::print(Queue& queue, portableSuperclusterSoA::SuperclusterDeviceCollection& collection) const {
     uint32_t items = 32;
     uint32_t groups = divide_up_by(collection->metadata().size(), items);
@@ -48,6 +76,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     alpaka::exec<Acc1D>(queue, workDiv, SuperclusterAlgoKernel{}, collection.view(), collection->metadata().size());
   }
 
+	//---- Kernel launch for SC and seed matching
+  void SuperclusterAlgo::matchSeeds(Queue& queue, portableSuperclusterSoA::SuperclusterDeviceCollection& collection,
+																		TrackSoAView<pixelTopology::Phase1> tracks_view) const {
+    uint32_t items = 32;
+    uint32_t groups = divide_up_by(tracks_view.metadata().size(), items);
+    auto workDiv = make_workdiv<Acc1D>(groups, items);
+    alpaka::exec<Acc1D>(queue, workDiv, SeedToSuperClusterMatcher{}, tracks_view, tracks_view.metadata().size(),collection.view(),collection->metadata().size());
+  }
+
+
+	//----------- Kernel and kernel launch for track SoA
 	template <typename TrackerTraits>
 	class FillTrackSoAKernel {
 	public:
@@ -68,10 +107,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				tracks_view.hitIndices().off[j] = j;
 			}
 
-			alpaka::syncBlockThreads(acc);
-			for (int32_t j : elements_with_stride(acc, tracks_view.metadata().size())) {
-        printf("Track pT : %f \n",tracks_view[j].pt());
-      }
+			//alpaka::syncBlockThreads(acc);
+			//for (int32_t j : elements_with_stride(acc, tracks_view.metadata().size())) {
+      //  printf("Track pT : %f \n",tracks_view[j].pt());
+      //}
 		}
 	};
 

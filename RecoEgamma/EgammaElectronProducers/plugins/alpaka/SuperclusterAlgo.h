@@ -18,6 +18,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   class SuperclusterAlgo {
   public:
     void print(Queue& queue, portableSuperclusterSoA::SuperclusterDeviceCollection& collection) const;
+    void matchSeeds(Queue& queue, portableSuperclusterSoA::SuperclusterDeviceCollection& collection,TrackSoAView<pixelTopology::Phase1> tracks_view) const;
+
   };
 
 	class FillTrackSoA {

@@ -95,6 +95,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			FillTrackSoA trackSoA_{};
 			trackSoA_.fillTrackSoA(tracks_d.view(), event.queue());
 
+
+			algo_.matchSeeds(event.queue(), deviceProduct,tracks_d.view());
+
+
 			event.emplace(deviceToken_, std::move(deviceProduct));
 
 		}
