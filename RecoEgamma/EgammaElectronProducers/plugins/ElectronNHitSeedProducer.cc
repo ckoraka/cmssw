@@ -136,6 +136,8 @@ void ElectronNHitSeedProducer::produce(edm::StreamID, edm::Event& iEvent, const 
       }
     }
   }
+  std::cout<<" Number of seeds : "<<eleSeeds.size()<<std::endl;
+
   iEvent.emplace(putToken_, std::move(eleSeeds));
 }
 

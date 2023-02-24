@@ -7,6 +7,8 @@
 #include <Eigen/Core>
 
 #include "DataFormats/EgammaReco/interface/alpaka/SuperclusterDeviceCollection.h"
+#include "DataFormats/EgammaReco/interface/alpaka/MagneticFieldParabolicPortable.h"
+
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/traits.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
@@ -20,6 +22,7 @@
 #include "SuperclusterAlgo.h"
 
 using Quality = pixelTrack::Quality;
+using Vector3f = Eigen::Matrix<float, 3, 1>;
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -32,12 +35,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   portableSuperclusterSoA::SuperclusterDeviceCollection::View view,
                                   int32_t size) const {
-
       const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
       // make a strided loop over the kernel grid, covering up to "size" elements
-      printf("Printed from device : \n");
+      //printf("Printed from device : \n");
       for (int32_t i : elements_with_stride(acc, size)) {
         printf("For SC i=%d Energy is :%f , theta is :%f,  \n",i,view[i].scEnergy(),view[i].scSeedTheta()) ;
+		// Try and see if MagField works :
+		Vector3f position{1,1,1};
+		printf("Calculate the Mag Field at the SC position : %f\n",MagneticFieldParabolicPortable::MagneticFieldAtPoint(position));
+
       }
     }
   };
@@ -52,17 +58,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   portableSuperclusterSoA::SuperclusterDeviceCollection::View viewSCs,
                                   int32_t sizeSCs) const {
 
-      const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
+	const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
 
-			printf("Printing from the SeedToSuperClusterMatcher kernel :");
-			// Strided loop over the seeds 
-			for(int32_t j : elements_with_stride(acc, view.metadata().size())) {
-        printf("Track pT : %f \n",view[j].pt());
-				for(int32_t i=0;i<=sizeSCs;++i){
-					printf("SC Energy : %f \n",viewSCs[i].scEnergy());
-					// Algo implementation should go here :
-					//
-				}
+	printf("Printing from the SeedToSuperClusterMatcher kernel :");
+	// Strided loop over the seeds 
+	for(int32_t j : elements_with_stride(acc, view.metadata().size())) {
+		printf("Track pT : %f \n",view[j].pt());
+		for(int32_t i=0;i<=sizeSCs;++i){
+			printf("SC Energy : %f \n",viewSCs[i].scEnergy());
+			// Algo implementation should go here :
+			//
+		}
       }
 
     }

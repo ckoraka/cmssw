@@ -8,10 +8,14 @@
 #include "DataFormats/EgammaReco/interface/alpaka/SuperclusterDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/SuperclusterHostCollection.h"
 
+#include "MagneticField/Engine/interface/MagneticField.h"
+#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
+
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/stream/EDProducer.h"
+#include "FWCore/Framework/interface/ESProducer.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
@@ -20,7 +24,6 @@
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "FWCore/Utilities/interface/StreamID.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
-
 
 #include "HeterogeneousCore/AlpakaCore/interface/ScopedContext.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -38,14 +41,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 	public:
 		SuperclusterCopyToDeviceProducer(edm::ParameterSet const& config)
 			: deviceToken_{produces()},
-			size_{config.getParameter<int32_t>("size")}{
+			size_{config.getParameter<int32_t>("size")},
+			magFieldToken_(esConsumes())
+			{
 			//superClustersTokens_ = consumes(config.getParameter<edm::InputTag>("getsuperclus"));
 			for (const auto& scTag : config.getParameter<std::vector<edm::InputTag>>("getsuperclus")) {
 				superClustersTokens_.emplace_back(consumes(scTag));
 			}
 		}
   
-		void produce(edm::StreamID sid, device::Event& event, device::EventSetup const&) const override {
+		void produce(edm::StreamID sid, device::Event& event, device::EventSetup const& iSetup) const override {
 
 			int i=0;
 			printf("Printed from host : \n");
@@ -70,6 +75,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				i++;
 			}
 			*/
+
+			// Get MagField ES product :
+			auto const& magField = iSetup.getData(magFieldToken_);
+			GlobalPoint center(1.0, 1.0, 1.0);
+  			float theMagField = magField.inTesla(center).mag();
+  			std::cout << "theMagField = " << theMagField << std::endl;
+
 
 			i=0;
 			printf("Printed from host : \n");
@@ -115,9 +127,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		const device::EDPutToken<portableSuperclusterSoA::SuperclusterDeviceCollection> deviceToken_;
 
 		const int32_t size_;
+		edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magFieldToken_;
 		std::vector<edm::EDGetTokenT<std::vector<reco::SuperClusterRef>>> superClustersTokens_;
 		//edm::EDGetTokenT<std::vector<reco::SuperCluster>> superClustersTokens_;
-
 		// Try and print out the device SoA elements
 		SuperclusterAlgo const algo_{};
 
