@@ -64,7 +64,9 @@ Vector chooseSolution(
   return theD;
 };
 
-void helixBarrelCylinderCrossing(const PositionType& startingPos, const DirectionType& startingDir, double rho, double radius, bool& theSolExists){
+void helixBarrelCylinderCrossing(const PositionType& startingPos, const DirectionType& startingDir, 
+                                  double rho, double radius, bool& theSolExists,
+                                  GlobalPoint& x, GlobalVector& p, double& s){
 
   // Cylinder must be barrel (x,y = 0,0)
   Solution sol = bothSol;
@@ -74,7 +76,6 @@ void helixBarrelCylinderCrossing(const PositionType& startingPos, const Directio
   PositionType thePos1;
   PositionType thePos2;
 
-  //bool theSolExists = false;
   double R = radius;
   const double sraightLineCutoff = 1.e-7;
 
@@ -91,7 +92,6 @@ void helixBarrelCylinderCrossing(const PositionType& startingPos, const Directio
   // center of helix in global coords?
   double center_x = startingPos.x() - startingDir.y() / (pt * rho);
   double center_y = startingPos.y() + startingDir.x() / (pt * rho);
-  //Point (is this 2D?) center(startingPos.x() - startingDir.y() / (pt * rho), startingPos.y() + startingDir.x() / (pt * rho));
  
   double p2 = startingPos.perp2();
   bool solveForX;
@@ -165,6 +165,11 @@ void helixBarrelCylinderCrossing(const PositionType& startingPos, const Directio
                          startingDir.x() * sinPhi + startingDir.y() * cosPhi,
                          startingDir.z());
 
+  // Fix
+  s = theS;
+  x = thePos;
+  p = theDir;
+
   if (sol != bothSol)
     return;
 
@@ -185,4 +190,5 @@ void helixBarrelCylinderCrossing(const PositionType& startingPos, const Directio
     tmp2 = std::copysign(1.f, tmp2);
   auto theS2 = theActualDir2 * 2.f * std::asin(tmp2) / (float(rho) * sinTheta);
   thePos2 = GlobalPoint(startingPos.x() + d2.x(), startingPos.y() + d2.y(), startingPos.z() + theS2 * cosTheta);
+
 };
