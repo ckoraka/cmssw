@@ -66,7 +66,6 @@ private:
   const edm::EDPutTokenT<reco::ElectronSeedCollection> putToken_;
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken;
   edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
-  
 };
 
 ElectronNHitSeedProducerNew::ElectronNHitSeedProducerNew(const edm::ParameterSet& pset)
@@ -150,11 +149,11 @@ void ElectronNHitSeedProducerNew::produce(edm::StreamID, edm::Event& iEvent, con
     PTrajectoryStateOnDet state1 = initialSeedRef.startingState();
     
     //std::cout<<"---  N hits in the seed: " << initialSeedRef.nHits()<<"  Starting state position: " << initialSeedRef.startingState().parameters().position()<<"  Starting state direction: " << initialSeedRef.startingState().parameters().momentum()<<"----------"<<std::endl;
-
     //for (size_t iHit = 0; iHit < initialSeedRef.nHits(); iHit++) {
-      //auto const& recHit = *(initialSeedRef.recHits().begin() + iHit);
-      //std::cout<<"---- rechit Global position : "<<recHit.globalPosition()<<"  ---------- rechit Local position : "<<recHit.localPosition()<<"-------------"<<std::endl;
+    //  auto const& recHit = *(initialSeedRef.recHits().begin() + iHit);
+    //  std::cout<<"---- rechit Global position : "<<recHit.globalPosition()<<"  ---------- rechit Local position : "<<recHit.localPosition()<<"-------------"<<std::endl;
     //}
+
 
     DetId detId1(state1.detId());
     TrajectoryStateOnSurface tsos1 = trajectoryStateTransform::transientState(state1, &(theG->idToDet(detId1)->surface()), &iSetup.getData(magFieldToken_));
@@ -162,55 +161,103 @@ void ElectronNHitSeedProducerNew::produce(edm::StreamID, edm::Event& iEvent, con
 
     // ---------------------------------------------------------------------------
     // Pass all the needed variables to perform the propagation 
-    trajStateOnSurface oldTsos;
-    oldTsos.aX = tsos1.globalPosition();
-    oldTsos.aP = tsos1.globalMomentum();
+    //trajStateOnSurface oldTsos;
+    //oldTsos.aX = tsos1.globalPosition();
+    //oldTsos.aP = tsos1.globalMomentum();
     //auto newTsos = testpropagation(oldTsos,10.);
     //std::cout<<"  New tsos   "<< newTsos.aX;
     // ---------------------------------------------------------------------------
       
-    // --------------------------------------------------------------------------------------------------
-    // Try out the helixBarrelCylinderCrossing propagator
-    if (!tsos2.isValid()) continue;
-    double rho = tsos2.transverseCurvature();
-    bool theSolExists = false;
-    GlobalPoint x = {0,0,0}; // position
-    GlobalVector p = {0,0,0}; //momentun
-    double s=0; //path length
-    helixBarrelCylinderCrossing(tsos2.globalPosition(),tsos2.globalMomentum(),rho,barrelRadius,theSolExists,x,p,s);
-    std::cout<<"  theSolExists : "<<theSolExists<< std::endl;
-    std::cout<<" Pos : "<< x  <<"  Path Length : "<< s << " Direction : "<< p << std::endl;
-    // --------------------------------------------------------------------------------------------------
 
+    // ------------------------------------------------------------------------------------
     // Original new algo 
-    if (!tsos1.isValid()) continue;
-    TrajectoryStateOnSurface stateAtECAL_ = forwardPropagator_.propagate(tsos1, ElectronNHitSeedProducerNew::barrel());
 
-    if(stateAtECAL_.isValid())
-      std::cout<<" Original propagator position : "<< stateAtECAL_.globalPosition() <<"  and eta " << stateAtECAL_.globalPosition().eta() << std::endl;
+    bool runCPUvesrion_ = true;
 
-    if (!stateAtECAL_.isValid() || (stateAtECAL_.isValid() && fabs(stateAtECAL_.globalPosition().eta()) > 1.479)) {
-      if (tsos1.globalPosition().eta() > 0.) {
-        stateAtECAL_ = forwardPropagator_.propagate(tsos1, positiveEtaEndcap());
-        if (stateAtECAL_.isValid())
-          std::cout<<" Original propagator position at endcap : "<< stateAtECAL_.globalPosition() <<"  and eta " << stateAtECAL_.globalPosition().eta() << std::endl;
-      } 
-      else {
-        stateAtECAL_ = forwardPropagator_.propagate(tsos1, negativeEtaEndcap());
+    if(runCPUvesrion_){
+
+      if (!tsos1.isValid()) 
+        continue;
+
+      TrajectoryStateOnSurface stateAtECAL_ = forwardPropagator_.propagate(tsos1, ElectronNHitSeedProducerNew::barrel());
+
+      //if(stateAtECAL_.isValid())
+      //  std::cout<<" Original propagator position : "<< stateAtECAL_.globalPosition() <<"  and eta " << stateAtECAL_.globalPosition().eta() << std::endl;
+
+      if (!stateAtECAL_.isValid() || (stateAtECAL_.isValid() && fabs(stateAtECAL_.globalPosition().eta()) > 1.479)) {
+        if (tsos1.globalPosition().eta() > 0.) {
+          stateAtECAL_ = forwardPropagator_.propagate(tsos1, positiveEtaEndcap());
+          //if (stateAtECAL_.isValid())
+          //  std::cout<<" Original propagator position at endcap : "<< stateAtECAL_.globalPosition() <<"  and eta " << stateAtECAL_.globalPosition().eta() << std::endl;
+        } 
+        else {
+          stateAtECAL_ = forwardPropagator_.propagate(tsos1, negativeEtaEndcap());
+        }
       }
-    }
+      //if (stateAtECAL_.isValid())
+      //  std::cout<<" Original propagator position at endcap : "<< stateAtECAL_.globalPosition() <<"  and eta " << stateAtECAL_.globalPosition().eta() << std::endl;
+      if (!stateAtECAL_.isValid()) {
+        continue;
+      }
+      else { //stateAtECAL_ is valid
 
-    if (!stateAtECAL_.isValid()) {
-      continue;
+        // CMSSW CPU implementation 
+        for (auto& superClusRef : iEvent.get(superClustersTokens_)) {
+          //	int nClus=superClusRef->clustersSize(); IF needed separate cuts for different nClus
+          float sc_et = superClusRef->energy() / std::cosh(superClusRef->position().eta());
+          double deltar2 =
+          reco::deltaR2(stateAtECAL_.globalPosition().eta(),
+          stateAtECAL_.globalPosition().phi(), superClusRef->seed()->position().eta(), superClusRef->position().phi());
+          double pTratio= sc_et / stateAtECAL_.globalMomentum().perp();
+
+          //  eventually these hard-coded values will go to config file, just testing now..
+          if (sc_et <= 20.0) { //low pT
+            if (deltar2<1E-5 && pTratio>0.8 && pTratio<1.2) { // these cuts need optimisation
+              eleSeeds=acceptThisSeed( initialSeedRef,  superClusRef,  eleSeeds);
+            }
+          }
+          //////
+          else if (sc_et>20.0 && sc_et<=50.0) { //medium pT -> relax pTratio cut 
+            if (deltar2<1E-5 && pTratio>0.4 && pTratio<1.6) {
+              eleSeeds=acceptThisSeed( initialSeedRef,  superClusRef,  eleSeeds);
+            }
+          }
+          //////
+          else if (sc_et>50.0) { //high pT -> no pTratio cut
+            if (deltar2<1E-4 ) {
+              eleSeeds=acceptThisSeed( initialSeedRef,  superClusRef,  eleSeeds);
+            }
+          }
+        } // Loop over SCs
+      } //stateAtECAL_ is valid
     }
-    else { //stateAtECAL_ is valid
+    else{
+      // ----------------  NEW   --------------------------------------------------------------------
+      // Try out the helixBarrelCylinderCrossing propagator
+      if (!tsos2.isValid()) continue;
+      double rho = tsos2.transverseCurvature();
+      bool theSolExists = false;
+      GlobalPoint x = {0,0,0}; // position
+      GlobalVector p = {0,0,0}; //momentun
+      double s=0; //path length
+      helixBarrelCylinderCrossing(tsos2.globalPosition(),tsos2.globalMomentum(),rho,barrelRadius,theSolExists,x,p,s);
+      //std::cout<<"  theSolExists : "<<theSolExists<< std::endl;
+      //std::cout<<" Pos : "<< x  <<"  Path Length : "<< s << " Direction : "<< p << std::endl;
+      // --------------------------------------------------------------------------------------------------
+      if(!(fabs(x.z())<endcapZ))
+        continue;
+      if(!theSolExists)
+        continue;
+
+      // New CPU implementation
+      // ---------------------------------------------------------------------------
       for (auto& superClusRef : iEvent.get(superClustersTokens_)) {
         //	int nClus=superClusRef->clustersSize(); IF needed separate cuts for different nClus
         float sc_et = superClusRef->energy() / std::cosh(superClusRef->position().eta());
         double deltar2 =
-        reco::deltaR2(stateAtECAL_.globalPosition().eta(),
-        stateAtECAL_.globalPosition().phi(), superClusRef->seed()->position().eta(), superClusRef->position().phi());
-        double pTratio= sc_et / stateAtECAL_.globalMomentum().perp();
+        reco::deltaR2(x.eta(),
+        x.phi(), superClusRef->seed()->position().eta(), superClusRef->position().phi());
+        double pTratio= sc_et / p.perp();
 
         //  eventually these hard-coded values will go to config file, just testing now..
         if (sc_et <= 20.0) { //low pT
@@ -223,18 +270,18 @@ void ElectronNHitSeedProducerNew::produce(edm::StreamID, edm::Event& iEvent, con
           if (deltar2<1E-5 && pTratio>0.4 && pTratio<1.6) {
             eleSeeds=acceptThisSeed( initialSeedRef,  superClusRef,  eleSeeds);
           }
-	      }
+        }
         //////
         else if (sc_et>50.0) { //high pT -> no pTratio cut
           if (deltar2<1E-4 ) {
             eleSeeds=acceptThisSeed( initialSeedRef,  superClusRef,  eleSeeds);
           }
         }
-	      //////////////////////
       } // loop over SC ends
+      // ------------------------------------------------------------------------------------
     }
   } // Loop on initial seed ends
-  //std::cout << "New: eleSeeds size " << eleSeeds.size() << std::endl;
+  std::cout << "New: eleSeeds size " << eleSeeds.size() << std::endl;
   iEvent.emplace(putToken_, std::move(eleSeeds));
 }
 
