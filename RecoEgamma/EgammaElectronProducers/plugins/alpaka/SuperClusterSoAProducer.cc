@@ -34,79 +34,69 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 	class SuperClusterSoAProducer : public global::EDProducer<> {
 	public:
-		SuperClusterSoAProducer(edm::ParameterSet const& config)
-			: deviceToken_{produces()},
-			size_{config.getParameter<int32_t>("size")},
+		SuperClusterSoAProducer(const edm::ParameterSet& pset): 
+			deviceToken_{produces()},
+			size_{pset.getParameter<int32_t>("size")},
 			magFieldToken_(esConsumes())
 			{
-			for (const auto& scTag : config.getParameter<std::vector<edm::InputTag>>("getsuperclus")) {
-				superClustersTokens_.emplace_back(consumes(scTag));
+				superClustersTokens_ = consumes(pset.getParameter<edm::InputTag>("superClusters"));
 			}
-		}
 
 		void produce(edm::StreamID sid, device::Event& event, device::EventSetup const& iSetup) const override {
 
+			// Get MagField ES product :
+			auto const& magField = iSetup.getData(magFieldToken_);
+
 			int i=0;
-			printf("Printed from host : \n");
-			for (const auto& superClustersToken : superClustersTokens_) {
-				for (auto& superClusRef : event.get(superClustersToken)) {
-					i++;
-				}
-			}	
+	        for (auto& superClusRef : event.get(superClustersTokens_)) {
+				++i;
+			}
 
 			reco::SuperclusterHostCollection hostProduct{i, event.queue()};
 			reco::SuperclusterDeviceCollection deviceProduct{i, event.queue()};
 
 			auto& view = hostProduct.view();
 
-			// Get MagField ES product :
-			auto const& magField = iSetup.getData(magFieldToken_);
-			GlobalPoint center(1.0, 1.0, 1.0);
-  			float theMagField = magField.inTesla(center).mag();
-  			std::cout << "theMagField = " << theMagField << std::endl;
-
-
-			i=0;
+			i = 0;
 			printf("Printed from host : \n");
-			for (const auto& superClustersToken : superClustersTokens_) {
-				for (auto& superClusRef : event.get(superClustersToken)) {
-					printf("For SC i=%d Energy is :%f , theta is :%f,  \n",i,superClusRef->energy(),superClusRef->seed()->position().theta()) ;
-					view[i].scSeedTheta() =  superClusRef->seed()->position().theta();
-					view[i].scPhi() = superClusRef->position().phi();
-					view[i].scR() = superClusRef->position().r();
-					view[i].scEnergy() = superClusRef->energy();
-					i++;
-				}
-			}	
-
+	        for (auto& superClusRef : event.get(superClustersTokens_)) {
+				printf("For SC i=%d Energy is :%f , theta is :%f,  r is : %f \n",i,superClusRef->energy(),superClusRef->seed()->position().theta(),superClusRef->position().r()) ;
+				view[i].scSeedTheta() =  superClusRef->seed()->position().theta();
+				view[i].scPhi() = superClusRef->position().phi();
+				view[i].scR() = superClusRef->position().r();
+				printf(" view %lf ", view[i].scR());
+				view[i].scEnergy() = superClusRef->energy();
+				i++;
+				float x = superClusRef->position().r() * sin(superClusRef->seed()->position().theta()) * cos(superClusRef->position().phi());
+				float y = superClusRef->position().r() * sin(superClusRef->seed()->position().theta()) * sin(superClusRef->position().phi());
+				float z = superClusRef->position().r() * cos(superClusRef->seed()->position().theta());
+				GlobalPoint center(x, y, z);
+				float theMagField = magField.inTesla(center).mag();
+				std::cout << "Magnetic field full  = " << theMagField << std::endl;
+			}
+						
 			alpaka::memcpy(event.queue(), deviceProduct.buffer(), hostProduct.buffer());
 
 			// Print the SoA 
 			algo_.print(event.queue(), deviceProduct);
 			//algo_.matchSeeds(event.queue(), deviceProduct,tracks_d.view());
-
 			event.emplace(deviceToken_, std::move(deviceProduct));
-
 		}
 
 		static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
 			edm::ParameterSetDescription desc;
 			desc.add<int32_t>("size");
-			desc.add<std::vector<edm::InputTag>>("getsuperclus");
+  			desc.add<edm::InputTag>("superClusters", {"hltEgammaSuperClustersToPixelMatch"});
 			descriptions.addWithDefaultLabel(desc);
 		}
 
 	private:
 
 		const device::EDPutToken<reco::SuperclusterDeviceCollection> deviceToken_;
-
 		const int32_t size_;
 		edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magFieldToken_;
-		std::vector<edm::EDGetTokenT<std::vector<reco::SuperClusterRef>>> superClustersTokens_;
-		//edm::EDGetTokenT<std::vector<reco::SuperCluster>> superClustersTokens_;
-		// Try and print out the device SoA elements
+		edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
 		SuperclusterAlgo const algo_{};
-
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

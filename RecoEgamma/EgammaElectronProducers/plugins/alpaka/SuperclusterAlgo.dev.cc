@@ -27,19 +27,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   reco::SuperclusterDeviceCollection::View view,
-                                  int32_t size) const {
-      const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
-      // make a strided loop over the kernel grid, covering up to "size" elements
-      //printf("Printed from device : \n");
-      for (int32_t i : elements_with_stride(acc, size)) {
-        printf("For SC i=%d Energy is :%f , theta is :%f,  \n",i,view[i].scEnergy(),view[i].scSeedTheta()) ;
-		// Try and see if MagField works :
-		Vector3f position{1,1,1};
-		printf("Calculate the Mag Field at the SC position : %f\n",MagneticFieldParabolicPortable::MagneticFieldAtPoint(position));
+                                  int32_t size) const 
+		{
+			const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
+			// Make a strided loop over the kernel grid, covering up to "size" elements
+			printf("Printed from device : \n");
 
-      }
-    }
-  };
+			for (int32_t i : elements_with_stride(acc, size)) 
+			{
+				printf("For SC i=%d Energy is :%f , theta is :%f , and r is %lf and phi is %lf,  \n",i,view[i].scEnergy(),view[i].scSeedTheta(), view[i].scR(),view[i].scPhi() ) ;
+				float x = view[i].scR() * alpaka::math::sin(acc,view[i].scSeedTheta()) * alpaka::math::sin(acc,view[i].scPhi());
+				float y = view[i].scR() * alpaka::math::sin(acc,view[i].scSeedTheta()) * alpaka::math::sin(acc,view[i].scPhi());
+				float z = view[i].scR() * alpaka::math::sin(acc,view[i].scSeedTheta());
+				printf("x: %lf,  y: %lf,  z %lf",x,z,y);
+				Vector3f position{x,y,z};
+				printf("Value of perp2 %lf",x*x+y*y);
+				printf("Calculate the magnetic field with the parabolic approx. at the SC position : %f\n",MagneticFieldParabolicPortable::MagneticFieldAtPoint(position));
+			}
+		}
+	};
 
 /*
 	//--- Kernel for performing the seed to SC match
@@ -69,22 +75,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   };
 */
 	//---- Kernel launch for printing the SC SoA collection
-  void SuperclusterAlgo::print(Queue& queue, reco::SuperclusterDeviceCollection& collection) const {
-    uint32_t items = 32;
-    uint32_t groups = divide_up_by(collection->metadata().size(), items);
-    auto workDiv = make_workdiv<Acc1D>(groups, items);
-    alpaka::exec<Acc1D>(queue, workDiv, SuperclusterAlgoKernel{}, collection.view(), collection->metadata().size());
-  }
+	void SuperclusterAlgo::print(Queue& queue, reco::SuperclusterDeviceCollection& collection) const {
+		uint32_t items = 32;
+		uint32_t groups = divide_up_by(collection->metadata().size(), items);
+		auto workDiv = make_workdiv<Acc1D>(groups, items);
+		alpaka::exec<Acc1D>(queue, workDiv, SuperclusterAlgoKernel{}, collection.view(), collection->metadata().size());
+	}
 
 /*
 	//---- Kernel launch for SC and seed matching
-  void SuperclusterAlgo::matchSeeds(Queue& queue, reco::SuperclusterDeviceCollection& collection,
-																		TrackSoAView<pixelTopology::Phase1> tracks_view) const {
-    uint32_t items = 32;
-    uint32_t groups = divide_up_by(tracks_view.metadata().size(), items);
-    auto workDiv = make_workdiv<Acc1D>(groups, items);
-    alpaka::exec<Acc1D>(queue, workDiv, SeedToSuperClusterMatcher{}, tracks_view, tracks_view.metadata().size(),collection.view(),collection->metadata().size());
-  }
+	void SuperclusterAlgo::matchSeeds(Queue& queue, 
+										reco::SuperclusterDeviceCollection& collection,
+										TrackSoAView<pixelTopology::Phase1> tracks_view) const 
+	{
+		uint32_t items = 32;
+		uint32_t groups = divide_up_by(tracks_view.metadata().size(), items);
+		auto workDiv = make_workdiv<Acc1D>(groups, items);
+		alpaka::exec<Acc1D>(queue, workDiv, SeedToSuperClusterMatcher{}, tracks_view, tracks_view.metadata().size(),collection.view(),collection->metadata().size());
+	}
 */
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
