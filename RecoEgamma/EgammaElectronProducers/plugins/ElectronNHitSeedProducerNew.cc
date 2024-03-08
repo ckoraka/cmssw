@@ -32,8 +32,6 @@
 #include "TrackingTools/DetLayers/interface/BarrelDetLayer.h"
 
 #include "RecoEgamma/EgammaElectronProducers/interface/helixToBarrelPropagator.h"
-//#include "RecoEgamma/EgammaElectronProducers/interface/helixToBarrelPropagator2.h"
-
 
 class ElectronNHitSeedProducerNew : public edm::global::EDProducer<> {
 public:
