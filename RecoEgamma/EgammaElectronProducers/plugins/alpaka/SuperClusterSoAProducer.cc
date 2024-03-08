@@ -6,6 +6,8 @@
 #include "DataFormats/PortableTestObjects/interface/alpaka/TestDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/alpaka/SuperclusterDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/SuperclusterHostCollection.h"
+#include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
+
 
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
@@ -30,6 +32,7 @@
 
 #include "SuperclusterAlgo.h"
 
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 	class SuperClusterSoAProducer : public global::EDProducer<> {
@@ -37,6 +40,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		SuperClusterSoAProducer(const edm::ParameterSet& pset): 
 			deviceToken_{produces()},
 			size_{pset.getParameter<int32_t>("size")},
+		    initialSeedsToken_(consumes(pset.getParameter<edm::InputTag>("initialSeeds"))),
 			magFieldToken_(esConsumes())
 			{
 				superClustersTokens_ = consumes(pset.getParameter<edm::InputTag>("superClusters"));
@@ -79,21 +83,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 			// Print the SoA 
 			algo_.print(event.queue(), deviceProduct);
-			//algo_.matchSeeds(event.queue(), deviceProduct,tracks_d.view());
+			algo_.matchSeeds(event.queue(), deviceProduct);
 			event.emplace(deviceToken_, std::move(deviceProduct));
 		}
 
 		static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
 			edm::ParameterSetDescription desc;
 			desc.add<int32_t>("size");
+			desc.add<edm::InputTag>("initialSeeds", {"hltElePixelSeedsCombined"});
   			desc.add<edm::InputTag>("superClusters", {"hltEgammaSuperClustersToPixelMatch"});
 			descriptions.addWithDefaultLabel(desc);
 		}
 
 	private:
-
 		const device::EDPutToken<reco::SuperclusterDeviceCollection> deviceToken_;
 		const int32_t size_;
+		const edm::EDGetTokenT<TrajectorySeedCollection> initialSeedsToken_;
 		edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magFieldToken_;
 		edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
 		SuperclusterAlgo const algo_{};

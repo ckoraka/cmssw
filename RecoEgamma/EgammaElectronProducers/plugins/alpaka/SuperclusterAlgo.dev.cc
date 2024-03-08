@@ -9,13 +9,24 @@
 #include "DataFormats/EgammaReco/interface/alpaka/SuperclusterDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/alpaka/MagneticFieldParabolicPortable.h"
 
+//#include "RecoEgamma/EgammaElectronProducers/interface/helixToBarrelPropagator.h"
+
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/traits.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
+#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixPropagator.h"
+
 #include "SuperclusterAlgo.h"
 
 using Vector3f = Eigen::Matrix<float, 3, 1>;
+
+static constexpr float epsilon = 0.001;
+/** Hard-wired numbers defining the surfaces on which the crystal front faces lie. */
+static constexpr float barrelRadius = 129.f;       // p81, p50, ECAL TDR
+static constexpr float barrelHalfLength = 270.9f;  // p81, p50, ECAL TDR
+static constexpr float endcapRadius = 171.1f;      // fig 3.26, p81, ECAL TDR
+static constexpr float endcapZ = 320.5f;           // fig 3.26, p81, ECAL TDR
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -47,33 +58,44 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		}
 	};
 
-/*
+
 	//--- Kernel for performing the seed to SC match
+	//--- Still dummy and just testing out some things
 	class SeedToSuperClusterMatcher {
-  public:
-    template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
-    ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  TrackSoAView<pixelTopology::Phase1> view,
-                                  int32_t size,
-                                  reco::SuperclusterDeviceCollection::View viewSCs,
-                                  int32_t sizeSCs) const {
+	public:
+		template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+		ALPAKA_FN_ACC void operator()(TAcc const& acc,
+										reco::SuperclusterDeviceCollection::View viewSCs,
+										int32_t sizeSCs) const 
+		{
 
-	const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
+			const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
 
-	printf("Printing from the SeedToSuperClusterMatcher kernel :");
-	// Strided loop over the seeds 
-	for(int32_t j : elements_with_stride(acc, view.metadata().size())) {
-		printf("Track pT : %f \n",view[j].pt());
-		for(int32_t i=0;i<=sizeSCs;++i){
-			printf("SC Energy : %f \n",viewSCs[i].scEnergy());
-			// Algo implementation should go here :
-			//
+			printf("Printing from the SeedToSuperClusterMatcher kernel :");
+
+
+
+			Vector3f x2 = {1,1,1}; // position
+			Vector3f p2 = {1,1,1}; //momentun
+			Vector3f gp = {0.,0.,0.,}; //position 
+			Vector3f gm = {1.,1.,1.,}; //momentun 
+
+      		double s=0; //path length
+			double rho = 1; // random now for testing
+			bool theSolExists = true; // random now for testing
+      		Propagators::helixBarrelCylinderCrossing(gp,gm,rho,barrelRadius,theSolExists,x2,p2,s);
+			printf("Position : %lf and direction : %lf and path length : %lf",x2(0),p2(0),s);
+
+
+			// Strided loop over the seeds 
+			//for(int32_t j : elements_with_stride(acc, viewSCs.metadata().size())) 
+			//{
+
+
+			//}
 		}
-      }
+	};
 
-    }
-  };
-*/
 	//---- Kernel launch for printing the SC SoA collection
 	void SuperclusterAlgo::print(Queue& queue, reco::SuperclusterDeviceCollection& collection) const {
 		uint32_t items = 32;
@@ -82,17 +104,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		alpaka::exec<Acc1D>(queue, workDiv, SuperclusterAlgoKernel{}, collection.view(), collection->metadata().size());
 	}
 
-/*
+
 	//---- Kernel launch for SC and seed matching
-	void SuperclusterAlgo::matchSeeds(Queue& queue, 
-										reco::SuperclusterDeviceCollection& collection,
-										TrackSoAView<pixelTopology::Phase1> tracks_view) const 
+	void SuperclusterAlgo::matchSeeds(Queue& queue, reco::SuperclusterDeviceCollection& collection) const 
 	{
 		uint32_t items = 32;
-		uint32_t groups = divide_up_by(tracks_view.metadata().size(), items);
+		uint32_t groups = divide_up_by(collection->metadata().size(), items);
 		auto workDiv = make_workdiv<Acc1D>(groups, items);
-		alpaka::exec<Acc1D>(queue, workDiv, SeedToSuperClusterMatcher{}, tracks_view, tracks_view.metadata().size(),collection.view(),collection->metadata().size());
+		alpaka::exec<Acc1D>(queue, workDiv, SeedToSuperClusterMatcher{},collection.view(),collection->metadata().size());
 	}
-*/
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

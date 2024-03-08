@@ -32,6 +32,8 @@
 #include "TrackingTools/DetLayers/interface/BarrelDetLayer.h"
 
 #include "RecoEgamma/EgammaElectronProducers/interface/helixToBarrelPropagator.h"
+//#include "RecoEgamma/EgammaElectronProducers/interface/helixToBarrelPropagator2.h"
+
 
 class ElectronNHitSeedProducerNew : public edm::global::EDProducer<> {
 public:
@@ -172,7 +174,7 @@ void ElectronNHitSeedProducerNew::produce(edm::StreamID, edm::Event& iEvent, con
     // ------------------------------------------------------------------------------------
     // Original new algo 
 
-    bool runCPUvesrion_ = true;
+    bool runCPUvesrion_ = false;
 
     if(runCPUvesrion_){
 
@@ -195,6 +197,7 @@ void ElectronNHitSeedProducerNew::produce(edm::StreamID, edm::Event& iEvent, con
           stateAtECAL_ = forwardPropagator_.propagate(tsos1, negativeEtaEndcap());
         }
       }
+
       //if (stateAtECAL_.isValid())
       //  std::cout<<" Original propagator position at endcap : "<< stateAtECAL_.globalPosition() <<"  and eta " << stateAtECAL_.globalPosition().eta() << std::endl;
       if (!stateAtECAL_.isValid()) {
@@ -244,9 +247,23 @@ void ElectronNHitSeedProducerNew::produce(edm::StreamID, edm::Event& iEvent, con
       GlobalVector p = {0,0,0}; //momentun
       double s=0; //path length
       helixBarrelCylinderCrossing(tsos2.globalPosition(),tsos2.globalMomentum(),rho,barrelRadius,theSolExists,x,p,s);
-      //std::cout<<"  theSolExists : "<<theSolExists<< std::endl;
-      //std::cout<<" Pos : "<< x  <<"  Path Length : "<< s << " Direction : "<< p << std::endl;
+      std::cout<<"  helixBarrelCylinderCrossing : "<<theSolExists<< std::endl;
+      std::cout<<"  theSolExists : "<<theSolExists<< std::endl;
+      std::cout<<" Pos : "<< x  <<"  Path Length : "<< s << " Direction : "<< p << std::endl;
       // --------------------------------------------------------------------------------------------------
+
+      //Eigen::Matrix<float, 3, 1> x2 = {0,0,0}; // position
+      //Eigen::Matrix<float, 3, 1> p2 = {0,0,0}; //momentun
+      //Eigen::Matrix<float, 3, 1> gp = {tsos2.globalPosition().x(),tsos2.globalPosition().y(),tsos2.globalPosition().z()}; //position 
+      //Eigen::Matrix<float, 3, 1> gm = {tsos2.globalMomentum().x(),tsos2.globalMomentum().y(),tsos2.globalMomentum().z()}; //momentun 
+
+      //s=0; //path length
+      //helixBarrelCylinderCrossing2(gp,gm,rho,barrelRadius,theSolExists,x2,p2,s);
+      //std::cout<<"  helixBarrelCylinderCrossing2 : "<<theSolExists<< std::endl;
+      //std::cout<<"  theSolExists : "<<theSolExists<< std::endl;
+      //std::cout<<" Pos : "<< x2  <<"  Path Length : "<< s << " Direction : "<< p2 << std::endl;
+
+
       if(!(fabs(x.z())<endcapZ))
         continue;
       if(!theSolExists)

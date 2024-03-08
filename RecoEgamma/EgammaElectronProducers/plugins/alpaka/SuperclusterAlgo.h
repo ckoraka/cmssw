@@ -13,6 +13,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   class SuperclusterAlgo {
   public:
     void print(Queue& queue, reco::SuperclusterDeviceCollection& collection) const;
+    void matchSeeds(Queue& queue, reco::SuperclusterDeviceCollection& collection) const;
 
   };
 
