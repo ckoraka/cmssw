@@ -32,6 +32,7 @@
 #include "TrackingTools/DetLayers/interface/BarrelDetLayer.h"
 
 #include "RecoEgamma/EgammaElectronProducers/interface/helixToBarrelPropagator.h"
+#include "RecoEgamma/EgammaElectronProducers/interface/helixToArbitraryPlanePropagator.h"
 
 class ElectronNHitSeedProducerNew : public edm::global::EDProducer<> {
 public:
@@ -184,7 +185,7 @@ void ElectronNHitSeedProducerNew::produce(edm::StreamID, edm::Event& iEvent, con
       //if(stateAtECAL_.isValid())
       //  std::cout<<" Original propagator position : "<< stateAtECAL_.globalPosition() <<"  and eta " << stateAtECAL_.globalPosition().eta() << std::endl;
 
-      if (!stateAtECAL_.isValid() || (stateAtECAL_.isValid() && fabs(stateAtECAL_.globalPosition().eta()) > 1.479)) {
+      if (!stateAtECAL_.isValid()) {
         continue; // ONLY BARREL
         if (tsos1.globalPosition().eta() > 0.) {
           stateAtECAL_ = forwardPropagator_.propagate(tsos1, positiveEtaEndcap());
@@ -238,17 +239,41 @@ void ElectronNHitSeedProducerNew::produce(edm::StreamID, edm::Event& iEvent, con
     else{
       // ----------------  NEW   --------------------------------------------------------------------
       // Try out the helixBarrelCylinderCrossing propagator
-      if (!tsos2.isValid()) continue;
+      if (!tsos2.isValid()) 
+        continue;
+
       double rho = tsos2.transverseCurvature();
-      bool theSolExists = false;
-      GlobalPoint x = {0,0,0}; // position
-      GlobalVector p = {0,0,0}; //momentun
-      double s=0; //path length
-      helixBarrelCylinderCrossing(tsos2.globalPosition(),tsos2.globalMomentum(),rho,barrelRadius,theSolExists,x,p,s);
-      std::cout<<"  helixBarrelCylinderCrossing : "<<theSolExists<< std::endl;
-      std::cout<<"  theSolExists : "<<theSolExists<< std::endl;
-      std::cout<<" Pos : "<< x  <<"  Path Length : "<< s << " Direction : "<< p << std::endl;
+      GlobalPoint posEndcapPos = {0,0,endcapZ};
+      GlobalPoint negEndcapPos = {0,0,-endcapZ};
+      GlobalVector planeNormal = {0,0,1};
+
+      bool theSolExistsEB = false;
+      GlobalPoint xEB = {0,0,0}; // position
+      GlobalVector pEB = {0,0,0}; //momentun
+      double sEB=0; //path length
+
+      bool theSolExistsEEn = false;
+      GlobalPoint xEEn = {0,0,0}; // position
+      GlobalVector pEEn = {0,0,0}; //momentun
+      double sEEn=0; //path length
+
+      bool theSolExistsEEp = false;
+      GlobalPoint xEEp = {0,0,0}; // position
+      GlobalVector pEEp = {0,0,0}; //momentun
+      double sEEp=0; //path length
+
+      helixBarrelCylinderCrossing(tsos2.globalPosition(),tsos2.globalMomentum(),rho,barrelRadius,theSolExistsEB,xEB,pEB,sEB);
+      helixToArbitraryPlanePropagator(tsos2.globalPosition(),tsos2.globalMomentum(),rho, posEndcapPos,planeNormal,sEEp,theSolExistsEEp,xEEp,pEEp);
+      helixToArbitraryPlanePropagator(tsos2.globalPosition(),tsos2.globalMomentum(),rho,negEndcapPos,planeNormal,sEEn,theSolExistsEEn,xEEn,pEEn);
+
+      std::cout<<"  helixBarrelCylinderCrossing : "<<theSolExistsEB<< std::endl;
+      std::cout<<"  theSolExistsEEp : "<<theSolExistsEEp<< std::endl;
+      std::cout<<"  theSolExistsEEn : "<<theSolExistsEEn<< std::endl;
+      std::cout<<" EB Pos : "<< xEB  <<"  Path Length : "<< sEB << " Direction : "<< pEB << std::endl;
+      std::cout<<" EE p Pos : "<< xEEp  <<"  Path Length : "<< sEEp << " Direction : "<< pEEp << std::endl;
+      std::cout<<" EE n Pos : "<< xEEn  <<"  Path Length : "<< sEEn << " Direction : "<< pEEn << std::endl;
       // --------------------------------------------------------------------------------------------------
+
 
       //Eigen::Matrix<float, 3, 1> x2 = {0,0,0}; // position
       //Eigen::Matrix<float, 3, 1> p2 = {0,0,0}; //momentun
@@ -262,36 +287,41 @@ void ElectronNHitSeedProducerNew::produce(edm::StreamID, edm::Event& iEvent, con
       //std::cout<<" Pos : "<< x2  <<"  Path Length : "<< s << " Direction : "<< p2 << std::endl;
 
 
-      if(!(fabs(x.z())<endcapZ))
+      if(!(fabs(xEB.z())<endcapZ))
         continue;
-      if(!theSolExists)
+ 
+      if(!theSolExistsEB || !theSolExistsEEp || !theSolExistsEEn)
         continue;
 
-      // New CPU implementation
+      // New CPU implementation - quality cuts application
       // ---------------------------------------------------------------------------
       for (auto& superClusRef : iEvent.get(superClustersTokens_)) {
         //	int nClus=superClusRef->clustersSize(); IF needed separate cuts for different nClus
         float sc_et = superClusRef->energy() / std::cosh(superClusRef->position().eta());
-        double deltar2 =
-        reco::deltaR2(x.eta(),
-        x.phi(), superClusRef->seed()->position().eta(), superClusRef->position().phi());
-        double pTratio= sc_et / p.perp();
+        double deltar2 = reco::deltaR2(xEB.eta(), xEB.phi(), superClusRef->seed()->position().eta(), superClusRef->position().phi());
+        double pTratio= sc_et / pEB.perp();
+
+        double deltar2EEp = reco::deltaR2(xEEp.eta(), xEEp.phi(), superClusRef->seed()->position().eta(), superClusRef->position().phi());
+        double pTratioEEp = sc_et / pEEp.perp();
+
+        double deltar2EEn = reco::deltaR2(xEEn.eta(), xEEn.phi(), superClusRef->seed()->position().eta(), superClusRef->position().phi());
+        double pTratioEEn = sc_et / pEEn.perp();
 
         //  eventually these hard-coded values will go to config file, just testing now..
         if (sc_et <= 20.0) { //low pT
-          if (deltar2<1E-5 && pTratio>0.8 && pTratio<1.2) { // these cuts need optimisation
+          if ( (deltar2<1E-5 && pTratio>0.8 && pTratio<1.2) || (deltar2EEn<1E-5 && pTratioEEn>0.8 && pTratioEEn<1.2) || (deltar2EEp<1E-5 && pTratioEEp>0.8 && pTratioEEp<1.2) ) { // these cuts need optimisation
             eleSeeds=acceptThisSeed( initialSeedRef,  superClusRef,  eleSeeds);
           }
         }
         //////
         else if (sc_et>20.0 && sc_et<=50.0) { //medium pT -> relax pTratio cut 
-          if (deltar2<1E-5 && pTratio>0.4 && pTratio<1.6) {
+          if ((deltar2<1E-5 && pTratio>0.4 && pTratio<1.6) || (deltar2EEp<1E-5 && pTratioEEp>0.4 && pTratioEEp<1.6) || (deltar2EEn<1E-5 && deltar2EEn>0.4 && deltar2EEn<1.6)) {
             eleSeeds=acceptThisSeed( initialSeedRef,  superClusRef,  eleSeeds);
           }
         }
         //////
         else if (sc_et>50.0) { //high pT -> no pTratio cut
-          if (deltar2<1E-4 ) {
+          if (deltar2<1E-4 || deltar2EEp<1E-4 || deltar2EEn<1E-4) {
             eleSeeds=acceptThisSeed( initialSeedRef,  superClusRef,  eleSeeds);
           }
         }
