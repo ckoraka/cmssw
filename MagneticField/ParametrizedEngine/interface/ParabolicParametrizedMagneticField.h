@@ -10,12 +10,14 @@ namespace magneticFieldParabolicPortable {
   struct Parameters {
     // These parameters are the best fit of 3.8T to the OAEParametrizedMagneticField parametrization.
     // See MagneticField/ParametrizedEngine/src/ParabolicParametrizedMagneticField.cc
+    // Hard-wired numbers defining the surfaces on which the crystal front faces lie 
+
     static constexpr float c1 = 3.8114;
     static constexpr float b0 = -3.94991e-06;
     static constexpr float b1 = 7.53701e-06;
     static constexpr float a = 2.43878e-11;
-    static constexpr float max_radius2 = 13225.f;  // tracker radius
-    static constexpr float max_z = 280.f;          // tracker z
+    static constexpr float max_radius2 = 10 *13225.f;  // tracker radius
+    static constexpr float max_z = 400.5f; //280.f;          // tracker z
   };
 
   template <typename Vec3>

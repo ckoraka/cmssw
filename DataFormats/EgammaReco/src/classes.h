@@ -1,3 +1,7 @@
+#include "DataFormats/EgammaReco/interface/SuperClusterSoA.h"
+#include "DataFormats/EgammaReco/interface/SuperclusterHostCollection.h"
+#include "DataFormats/EgammaReco/interface/EleSeedSoA.h"
+#include "DataFormats/EgammaReco/interface/EleSeedHostCollection.h"
 #include "DataFormats/Common/interface/Wrapper.h"
 #include "DataFormats/EgammaReco/interface/BasicCluster.h"
 #include "Math/Cartesian3D.h"
