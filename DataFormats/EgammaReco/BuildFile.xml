@@ -1,6 +1,6 @@
+<use name="eigen"/>
 <use name="DataFormats/Common"/>
 <use name="rootcore"/>
-<use name="eigen"/>
 <use name="DataFormats/EcalRecHit"/>
 <use name="clhepheader"/>
 <use name="DataFormats/CaloRecHit"/>

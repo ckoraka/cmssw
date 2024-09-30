@@ -4,8 +4,8 @@
 
 #include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
-#include "DataFormats/EgammaReco/interface/SuperClusterSoA.h"
 #include "DataFormats/EgammaReco/interface/EleSeedSoA.h"
+#include "DataFormats/EgammaReco/interface/SuperClusterSoA.h"
 #include "DataFormats/EgammaReco/interface/alpaka/SuperclusterDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/SuperclusterHostCollection.h"
 #include "DataFormats/EgammaReco/interface/alpaka/EleSeedDeviceCollection.h"
@@ -36,22 +36,22 @@
 #include "HeterogeneousCore/AlpakaServices/interface/alpaka/AlpakaService.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/global/EDProducer.h"
 
-#include "SuperclusterAlgo.h"
 
-// testing 
+// Additional includes 
+#include "PixelMatchingAlgo.h"
+
 #include "TrackingTools/MaterialEffects/interface/PropagatorWithMaterial.h"
 #include "DataFormats/GeometryCommonDetAlgo/interface/PerpendicularBoundPlaneBuilder.h"
 
-
 #include "TrackingTools/TrajectoryState/interface/ftsFromVertexToPoint.h"
-#include "RecoEgamma/EgammaElectronAlgos/interface/ftsFromVertexToPointPortable.h"
+#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/ftsFromVertexToPointPortable.h"
 
-#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixPropagator.h"
+//#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixPropagator.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixBarrelPlaneCrossingByCircle.h"
 
 #include "DataFormats/EgammaReco/interface/Plane.h"
 
-using Vector3f = Eigen::Matrix<float, 3, 1>;
+using Vector3f = Eigen::Matrix<double, 3, 1>;
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -70,7 +70,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		void produce(edm::StreamID sid, device::Event& event, device::EventSetup const& iSetup) const override {
 
 			auto vprim_ = event.get(beamSpotToken_).position();
-			std::cout<<"vprim "<<vprim_<<std::endl;
+			GlobalPoint vprim(vprim_.x(), vprim_.y(), vprim_.z());
+			Vector3f vertex{vprim.x(),vprim.y(),vprim.z()};
+
+			// NEW EVENT 
+
+			std::cout<<" -----> NEW EVENT with vprim : "<<vprim_<<std::endl;
 
 			// Get MagField ESProduct for comparing 
 			auto const& magField = iSetup.getData(magFieldToken_);
@@ -100,6 +105,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			////////////////////////////////////////////////////////////////////
 			// Fill in SOAs
 			// Technically should separate in different producers that create the SoAs
+			// Info on SoAs : https://github.com/cms-sw/cmssw/blob/master/DataFormats/SoATemplate/README.md
 
 			i = 0;
 			printf("Printed from host : \n");
@@ -112,19 +118,76 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				++i;
 			}
 
+			// This is so ugly :( 
+			// To figure out is there is another way to bulid this SoA
 			i = 0;
 			for (auto& initialSeedRef : event.get(initialSeedsToken_)) 
 			{	
 				viewSeeds[i].nHits() = initialSeedRef.nHits();
-				for (size_t iHit = 0;iHit < initialSeedRef.nHits();iHit++) {		
-					auto const& recHit = *(initialSeedRef.recHits().begin() + iHit);  
-					//viewSeeds[[i][iHit]].detectorID() = recHit.geographicalId().subdetId() == PixelSubdetector::PixelBarrel ? 1: 0;
-					//viewSeeds[i][iHit].isValid() = recHit.isValid();
+				
+				auto const& recHit = *(initialSeedRef.recHits().begin() + 0);  
+				//viewSeeds[i].detectorID().x() = recHit.geographicalId().subdetId() == PixelSubdetector::PixelBarrel ? 1: 0;
+				viewSeeds[i].isValid().x() = recHit.isValid();
+				viewSeeds[i].hitPosX().x() = recHit.globalPosition().x();
+				viewSeeds[i].hitPosY().x() = recHit.globalPosition().y();
+				viewSeeds[i].hitPosZ().x() = recHit.globalPosition().z();
+				viewSeeds[i].surfPosX().x() = recHit.det()->surface().position().x();
+				viewSeeds[i].surfPosY().x() = recHit.det()->surface().position().y();
+				viewSeeds[i].surfPosZ().x() = recHit.det()->surface().position().z();
+				viewSeeds[i].surfRotX().x() = recHit.det()->surface().rotation().z().x();
+				viewSeeds[i].surfRotY().x() = recHit.det()->surface().rotation().z().y();
+				viewSeeds[i].surfRotZ().x() = recHit.det()->surface().rotation().z().z();
+
+				auto const& recHit1 = *(initialSeedRef.recHits().begin() + 1);  
+				//viewSeeds[i].detectorID().y() = recHit1.geographicalId().subdetId() == PixelSubdetector::PixelBarrel ? 1: 0;
+				viewSeeds[i].isValid().y() = recHit1.isValid();
+				viewSeeds[i].hitPosX().y() = recHit1.globalPosition().x();
+				viewSeeds[i].hitPosY().y() = recHit1.globalPosition().y();
+				viewSeeds[i].hitPosZ().y() = recHit1.globalPosition().z();
+				viewSeeds[i].surfPosX().y() = recHit1.det()->surface().position().x();
+				viewSeeds[i].surfPosY().y() = recHit1.det()->surface().position().y();
+				viewSeeds[i].surfPosZ().y() = recHit1.det()->surface().position().z();
+				viewSeeds[i].surfRotX().y() = recHit1.det()->surface().rotation().z().x();
+				viewSeeds[i].surfRotY().y() = recHit1.det()->surface().rotation().z().y();
+				viewSeeds[i].surfRotZ().y() = recHit1.det()->surface().rotation().z().z();
+
+				if(initialSeedRef.nHits()>2){
+					auto const& recHit2 = *(initialSeedRef.recHits().begin() + 2);  
+					//viewSeeds[i].detectorID().z() = recHit2.geographicalId().subdetId() == PixelSubdetector::PixelBarrel ? 1: 0;
+					viewSeeds[i].isValid().z() = recHit2.isValid();
+					viewSeeds[i].hitPosX().z() = recHit2.globalPosition().x();
+					viewSeeds[i].hitPosY().z() = recHit2.globalPosition().y();
+					viewSeeds[i].hitPosZ().z() = recHit2.globalPosition().z();
+					viewSeeds[i].surfPosX().z() = recHit2.det()->surface().position().x();
+					viewSeeds[i].surfPosY().z() = recHit2.det()->surface().position().y();
+					viewSeeds[i].surfPosZ().z() = recHit2.det()->surface().position().z();
+					viewSeeds[i].surfRotX().z() = recHit2.det()->surface().rotation().z().x();
+					viewSeeds[i].surfRotY().z() = recHit2.det()->surface().rotation().z().y();
+					viewSeeds[i].surfRotZ().z() = recHit2.det()->surface().rotation().z().z();		
 				}
+				else{
+					viewSeeds[i].isValid().z() = 0;
+					viewSeeds[i].hitPosX().z() = 0;
+					viewSeeds[i].hitPosY().z() = 0;
+					viewSeeds[i].hitPosZ().z() = 0;
+					viewSeeds[i].surfPosX().z() = 0;
+					viewSeeds[i].surfPosY().z() = 0;
+					viewSeeds[i].surfPosZ().z() = 0;
+					viewSeeds[i].surfRotX().z() = 0;
+					viewSeeds[i].surfRotY().z() = 0;
+					viewSeeds[i].surfRotZ().z() = 0;		
+				}
+				
 				++i;
 			}
 
-			////////////////////////////////////////////////////////////////////
+			alpaka::memcpy(event.queue(), deviceProductSCs.buffer(), hostProductSCs.buffer());
+			alpaka::memcpy(event.queue(), deviceProductSeeds.buffer(), hostProductSeeds.buffer());
+
+			// Print the SoA 
+			algo_.printEleSeeds(event.queue(), deviceProductSeeds);
+			algo_.printSCs(event.queue(), deviceProductSCs);
+			//algo_.matchSeeds(event.queue(), deviceProductSeeds, deviceProductSCs,vertex(0),vertex(1), vertex(2));
 
 
 	        for (auto& superClusRef : event.get(superClustersTokens_)) 
@@ -135,8 +198,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				GlobalPoint center(x, y, z);
 				float theMagField = magField.inTesla(center).mag();
 				Vector3f position{x,y,z};
-  				GlobalPoint vprim(vprim_.x(), vprim_.y(), vprim_.z());
-				Vector3f vertex{vprim.x(),vprim.y(),vprim.z()};
 				GlobalPoint sc(GlobalPoint::Polar(superClusRef->seed()->position().theta(),  //seed theta
                                                 superClusRef->position().phi(),    //supercluster phi
                                                 superClusRef->position().r()));    //supercluster r
@@ -148,29 +209,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				Vector3f testposition = {newfreeTS.position(0),newfreeTS.position(1),newfreeTS.position(2)};
 				Vector3f testmomentum = {newfreeTS.momentum(0),newfreeTS.momentum(1),newfreeTS.momentum(2)};
 
-				std::cout<<"  Supercluster "<< superClusRef->position().x()<<" "<< superClusRef->position().y()<<std::endl;
-				std::cout<<"  Supercluster "<< x <<" "<< y <<" "<<z <<std::endl;
-
-
-				auto transverseCurvature = [](const Vector3D& p, int charge, const float& magneticFieldZ) -> float {
+				auto transverseCurvature = [](const Vector3f& p, int charge, const float& magneticFieldZ) -> float {
    			 			return -2.99792458e-3f * (charge / sqrt(p(0) * p(0) + p(1) * p(1))) * magneticFieldZ;  
 				};
 
 				for (auto& initialSeedRef : event.get(initialSeedsToken_)) 
 				{			
-
-
-					//std::cout<<" ------------Start loop"<<std::endl;
-
 					auto const& recHit = *(initialSeedRef.recHits().begin() + 0);  
 					if(!recHit.isValid())      
 						continue;
-
-					std::cout<<" recHit.det()->surface().position() "<<recHit.det()->surface().position()<<" rotation? "<<recHit.det()->surface().rotation().z()<<std::endl;
-
-					//std::cout<<" Print out legacy fts position "<< freeTS.position() <<"  and new implementation one : "<<testposition(0) <<" "<<testposition(1)<<" "<<testposition(2)<<std::endl;
-					//std::cout<<" Print out legacy fts momentum "<< freeTS.momentum() <<"  and new implementation one : "<<testmomentum(0) <<" "<<testmomentum(1)<<" "<<testmomentum(2) <<std::endl;
-					//std::cout<<" initialTrajState pos "<< initialTrajState.globalPosition()<<"  and momentum  "<<initialTrajState.globalMomentum()<<std::endl;
 
 					double rho = 0.;
 					double s = 0.;
@@ -183,10 +230,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 					Vector3f p2{0,0,0};
 
 					rho = transverseCurvature(testmomentum,1,magneticFieldParabolicPortable::magneticFieldAtPoint(position));
-					//std::cout<<" New "<< rho <<"  and old "<<freeTS.transverseCurvature() <<std::endl;
-
-
-					Propagators::helixBarrelPlaneCrossing(testposition,testmomentum,rho,oppositeToMomentum,surfPosition,surfRotation,theSolExists,x2,p2,s);
+					Propagators::helixBarrelPlaneCrossing(testposition,testmomentum,rho,Propagators::oppositeToMomentum,surfPosition,surfRotation,theSolExists,x2,p2,s);
 					if(!theSolExists)
 						continue;
 
@@ -194,24 +238,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 					if(!state.isValid())
 						continue;
 
+					// Momentum should be renormalized - might want to add this in propagator ?
+					p2.normalize(); 
+					p2*= testmomentum.norm();
 
-					std::cout<<" Initial: "<< state.globalParameters().position()<<"   and new "<< x2(0) <<" "<< x2(1) << " "<< x2(2)<<std::endl;
-
+					if(false){
+			            PlanePortable::Plane<Vector3f> plane{surfPosition,surfRotation};
+						std::cout<<" New "<< rho <<"  and old "<<freeTS.transverseCurvature() <<std::endl;
+						std::cout<<" recHit.det()->surface().position() "<<recHit.det()->surface().position()<<" rotation? "<<recHit.det()->surface().rotation().z()<<std::endl;
+						std::cout<<" Print out legacy fts position "<< freeTS.position() <<"  and new implementation one : "<<testposition(0) <<" "<<testposition(1)<<" "<<testposition(2)<<std::endl;
+						std::cout<<" Print out legacy fts momentum "<< freeTS.momentum() <<"  and new implementation one : "<<testmomentum(0) <<" "<<testmomentum(1)<<" "<<testmomentum(2) <<std::endl;
+						std::cout<<" initialTrajState pos "<< initialTrajState.globalPosition()<<"  and momentum  "<<initialTrajState.globalMomentum()<<std::endl;
+						std::cout<<" surfPosition " <<surfPosition(0)<<" "<<surfPosition(1)<<" "<<surfPosition(2)<<std::endl;
+						std::cout<<" surfRotation " <<surfRotation(0)<<" "<<surfRotation(1)<<" "<<surfRotation(2)<<std::endl;
+						std::cout<<" pt = startingDir.head(2).norm() "<< testmomentum.head(2).norm() << " and the equivalent "<< initialTrajState.globalMomentum().perp() <<std::endl;
+						std::cout<<" test plane stuff  norm vec"<< plane.normalVector() << "recHit.det()->surface().normalVector "<<recHit.det()->surface().normalVector()<<std::endl;
+						std::cout<<" test plane stuff localZ "<< -plane.localZ(testposition) << "recHit.det()->surface().normalVector "<< -recHit.det()->surface().localZ(GlobalPoint(initialTrajState.globalPosition()))<<std::endl;
+						std::cout<<" Initial: "<< state.globalParameters().position()<<"   and new "<< x2(0) <<" "<< x2(1) << " "<< x2(2)<<std::endl;
+						std::cout<<" Initial: "<< state.globalParameters().momentum()<<"   and new "<< p2(0) <<" "<< p2(1) << " "<< p2(2)<<std::endl;
+					}
 				}
 
-
-				//printf("Print out legacy fts position %f and new fts position  and %d \n",freeTS.position().x(), testcharge);
-				//printf("For SC i=%d Energy is :%f , theta is :%f,  r is : %f \n",i,superClusRef->energy(),superClusRef->seed()->position().theta(),superClusRef->position().r()) ;
-				//printf(" view %lf ", viewSCs[i].scR());
-				//printf("Magnetic field full  = %f and the parabolic approximation %f ", theMagField, magneticFieldParabolicPortable::magneticFieldAtPoint(position));
+				if(false){
+					printf("Print out legacy fts position %f and new fts position  and %lf \n",freeTS.position().x(), testposition(0));
+					printf("For SC i=%d Energy is :%f , theta is :%f,  r is : %f \n",i,superClusRef->energy(),superClusRef->seed()->position().theta(),superClusRef->position().r()) ;
+					printf(" view %lf ", viewSCs[i].scR());
+					printf("Magnetic field full  = %f and the parabolic approximation %f ", theMagField, magneticFieldParabolicPortable::magneticFieldAtPoint(position));
+				}
 			}
 
-
-			alpaka::memcpy(event.queue(), deviceProductSCs.buffer(), hostProductSCs.buffer());
-
-			// Print the SoA 
-			//algo_.print(event.queue(), deviceProductSCs);
-			//algo_.matchSeeds(event.queue(), deviceProductSCs);
 			event.emplace(deviceToken_, std::move(deviceProductSCs));
 		}
 
@@ -231,7 +286,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
 		edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magFieldToken_;
 		edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
-		SuperclusterAlgo const algo_{};
+		PixelMatchingAlgo const algo_{};
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

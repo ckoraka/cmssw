@@ -1,22 +1,26 @@
-#ifndef EgammaReco_EleSeedSoA_h
-#define EgammaReco_EleSeedSoA_h
+#ifndef DataFormats_EgammaReco_interface_EleSeedSoA_h
+#define DataFormats_EgammaReco_interface_EleSeedSoA_h
 
+#include <Eigen/Core>
 #include <cstdint>
 #include "DataFormats/SoATemplate/interface/SoACommon.h"
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 #include "DataFormats/SoATemplate/interface/SoAView.h"
 
-using Vector3D = Eigen::Matrix <float,3,1>;
-using Matrix3D = Eigen::Matrix <float,3,3>;
-
 namespace reco {
 	GENERATE_SOA_LAYOUT(EleSeedLayout,
-		SOA_SCALAR(int32_t, nHits),
-		SOA_COLUMN(Matrix3D, hitPos),
-		SOA_COLUMN(Matrix3D, surfPos),
-		SOA_COLUMN(Matrix3D, surfRot),
-		SOA_COLUMN(int32_t, detectorID),
-		SOA_COLUMN(bool, isValid)
+		SOA_COLUMN(int32_t, nHits),
+		SOA_COLUMN(Eigen::Vector3d, hitPosX),
+		SOA_COLUMN(Eigen::Vector3d, hitPosY),
+		SOA_COLUMN(Eigen::Vector3d, hitPosZ),
+		SOA_COLUMN(Eigen::Vector3d, surfPosX),
+		SOA_COLUMN(Eigen::Vector3d, surfPosY),
+		SOA_COLUMN(Eigen::Vector3d, surfPosZ),
+		SOA_COLUMN(Eigen::Vector3d, surfRotX),
+		SOA_COLUMN(Eigen::Vector3d, surfRotY),
+		SOA_COLUMN(Eigen::Vector3d, surfRotZ),
+		SOA_COLUMN(Eigen::Vector3d, detectorID),
+		SOA_COLUMN(Eigen::Vector3d, isValid)
 	)
 	using EleSeedSoA = EleSeedLayout<>;
 }  // namespace reco

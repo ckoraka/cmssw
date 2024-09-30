@@ -34,8 +34,8 @@
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 #include "TrackingTools/DetLayers/interface/BarrelDetLayer.h"
 
-#include "RecoEgamma/EgammaElectronProducers/interface/helixToBarrelPropagator.h"
-#include "RecoEgamma/EgammaElectronProducers/interface/helixToArbitraryPlanePropagator.h"
+//#include "RecoEgamma/EgammaElectronProducers/interface/helixToBarrelPropagator.h"
+//#include "RecoEgamma/EgammaElectronProducers/interface/helixToArbitraryPlanePropagator.h"
 
 #include "DataFormats/GeometryCommonDetAlgo/interface/PerpendicularBoundPlaneBuilder.h"
 #include "TrackingTools/TrajectoryState/interface/ftsFromVertexToPoint.h"

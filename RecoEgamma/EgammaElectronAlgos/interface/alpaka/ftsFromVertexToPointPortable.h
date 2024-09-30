@@ -1,5 +1,5 @@
-#ifndef RecoEgamma_EgammaElectronAlgos_ftsFromVertexToPointPortable_h
-#define RecoEgamma_EgammaElectronAlgos_ftsFromVertexToPointPortable_h
+#ifndef RecoEgamma_EgammaElectronAlgos_interface_alpaka_ftsFromVertexToPointPortable_h
+#define RecoEgamma_EgammaElectronAlgos_interface_alpaka_ftsFromVertexToPointPortable_h
 
 #include <cmath>
 #include <Eigen/Core>
@@ -57,4 +57,4 @@ namespace ftsFromVertexToPointPortable {
 
 }  // namespace ftsFromVertexToPointPortable
 
-#endif  // RecoEgamma_EgammaElectronAlgos_ftsFromVertexToPointPortable_h
+#endif  // RecoEgamma_EgammaElectronAlgos_interface_alpaka_ftsFromVertexToPointPortable_h
