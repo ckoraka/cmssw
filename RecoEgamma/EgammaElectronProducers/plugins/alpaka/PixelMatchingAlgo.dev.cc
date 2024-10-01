@@ -14,11 +14,11 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/traits.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
-//#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixPropagator.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixBarrelPlaneCrossingByCircle.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/ftsFromVertexToPointPortable.h"
 
 #include "PixelMatchingAlgo.h"
+#include "DataFormats/EgammaReco/interface/EleRelPointPairPortable.h"
 
 
 using Vector3f = Eigen::Matrix<double, 3, 1>;
@@ -27,22 +27,39 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   using namespace cms::alpakatools;
 
-   //--- Kernel for printing the SC SoA
-  class printSCSoA {
-  public:
-    template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
-    ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  reco::SuperclusterDeviceCollection::View view,
-                                  int32_t size) const 
+	ALPAKA_FN_ACC ALPAKA_FN_INLINE float getZVtxFromExtrapolation(const Vector3f& primeVtxPos,
+											const Vector3f& hitPos,
+											const Vector3f& candPos) {
+		auto sq = [](float x) { return x * x; };
+		auto calRDiff = [sq](const Vector3f& p1, const Vector3f& p2) {
+			return sqrt(sq(p2(0) - p1(0)) + sq(p2(1) - p1(1)));
+		};
+		const double r1Diff = calRDiff(primeVtxPos, hitPos);
+		const double r2Diff = calRDiff(hitPos, candPos);
+		float zvtx = hitPos(2) - r1Diff * (candPos(2) - hitPos(2)) / r2Diff;
+		return zvtx;
+	}
+
+	ALPAKA_FN_ACC ALPAKA_FN_INLINE float getCutValue(float et, float highEt, float highEtThres, float lowEtGrad) {
+		return highEt + std::min(0.f, et - highEtThres) * lowEtGrad;
+	}
+
+	//--- Kernel for printing the SC SoA
+	class printSCSoA {
+	public:
+	template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+	ALPAKA_FN_ACC void operator()(TAcc const& acc,
+									reco::SuperclusterDeviceCollection::View view,
+									int32_t size) const 
 		{
 			const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
 			printf("Printed from device : \n");
 			for (int32_t i : uniform_elements(acc, size)) 
 			{
 				printf("For SC i=%d Energy is :%f , theta is :%f , and r is %lf and phi is %lf,  \n",i,view[i].scEnergy(),view[i].scSeedTheta(), view[i].scR(),view[i].scPhi() ) ;
-				float x = view[i].scR() * alpaka::math::sin(acc,view[i].scSeedTheta()) * alpaka::math::sin(acc,view[i].scPhi());
-				float y = view[i].scR() * alpaka::math::sin(acc,view[i].scSeedTheta()) * alpaka::math::cos(acc,view[i].scPhi());
-				float z = view[i].scR() * alpaka::math::sin(acc,view[i].scSeedTheta());
+				float x = view[i].scR() * alpaka::math::sin(acc,view[i].scSeedTheta()) * alpaka::math::cos(acc,view[i].scPhi());
+				float y = view[i].scR() * alpaka::math::sin(acc,view[i].scSeedTheta()) * alpaka::math::sin(acc,view[i].scPhi());
+				float z = view[i].scR() * alpaka::math::cos(acc,view[i].scSeedTheta());
 				printf("x: %lf,  y: %lf,  z %lf",x,z,y);
 				Vector3f position{x,y,z};
 				printf("Value of perp2 %lf \n",x*x+y*y);
@@ -51,7 +68,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		}
 	};
 
-   //--- Kernel for printing the electron seeds SoA
+   	//--- Kernel for printing the electron seeds SoA
 	class printElectronSeedSoA {
 	public:
 	template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
@@ -90,14 +107,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
 
 			Vector3f vertex = {vtx_x,vtx_y,vtx_z}; 
+
 			for (int32_t i : uniform_elements(acc,sizeEleSeeds)) 
 			{
-				Vector3f x2 = {0,0,0};
-				Vector3f p2 = {0,0,0}; 
+
+				if(!(viewEleSeeds[i].isValid().x()))
+					continue;
+
+				// Access first hit information
+				Vector3f hitPosition  = {viewEleSeeds[i].hitPosX().x(),viewEleSeeds[i].hitPosY().x(),viewEleSeeds[i].hitPosZ().x()};
+				Vector3f surfPosition = {viewEleSeeds[i].surfPosX().x(),viewEleSeeds[i].surfPosY().x(),viewEleSeeds[i].surfPosZ().x()};
+				Vector3f surfRotation = {viewEleSeeds[i].surfRotX().x(),viewEleSeeds[i].surfRotY().x(),viewEleSeeds[i].surfRotZ().x()};
 
 				for(int32_t j : uniform_elements(acc,sizeSCs)) 
 				{
-					Vector3f positionSC = {viewSCs[j].scR() * sin(viewSCs[j].scSeedTheta()) * cos(viewSCs[j].scPhi()),viewSCs[j].scR() * sin(viewSCs[j].scSeedTheta()) * cos(viewSCs[j].scPhi()),viewSCs[j].scR() * cos(viewSCs[j].scSeedTheta())};
+					float x = viewSCs[j].scR() * alpaka::math::sin(acc,viewSCs[j].scSeedTheta()) * alpaka::math::cos(acc,viewSCs[j].scPhi());
+					float y = viewSCs[j].scR() * alpaka::math::sin(acc,viewSCs[j].scSeedTheta()) * alpaka::math::sin(acc,viewSCs[j].scPhi());
+					float z = viewSCs[j].scR() * alpaka::math::cos(acc,viewSCs[j].scSeedTheta());
+					float et = viewSCs[j].scEnergy() * alpaka::math::sin(acc, viewSCs[j].scSeedTheta());
+					Vector3f positionSC = {x,y,z};
+
 					for (int charge : {1,-1}) 
 					{
 						auto newfreeTS = ftsFromVertexToPointPortable::ftsFromVertexToPoint(positionSC,vertex, viewSCs[j].scEnergy(),charge,magneticFieldParabolicPortable::magneticFieldAtPoint(positionSC));									
@@ -107,19 +136,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 						auto transverseCurvature = [](const Vector3f& p, int charge, const float& magneticFieldZ) -> float {
    			 				return -2.99792458e-3f * (charge / sqrt(p(0) * p(0) + p(1) * p(1))) * magneticFieldZ;  
 						};
+
 						double s=0; 
-						double rho = transverseCurvature(momentum,1,magneticFieldParabolicPortable::magneticFieldAtPoint(positionSC));
 						bool theSolExists = false; 
+						Vector3f propagatedPos = {0,0,0};
+						Vector3f propagatedMom = {0,0,0}; 
+						double rho = transverseCurvature(momentum,1,magneticFieldParabolicPortable::magneticFieldAtPoint(positionSC));
+						Propagators::helixBarrelPlaneCrossing(position,momentum,rho,Propagators::oppositeToMomentum,surfPosition,surfRotation,theSolExists,propagatedPos,propagatedMom,s);
+						if(!theSolExists)
+							continue;
+						// Momentum should be renormalized - might want to add this in propagator ?
+						propagatedMom.normalize(); 
+						propagatedMom*= momentum.norm();
 
-						Vector3f surfPosition = {viewEleSeeds[i].surfPosX().x(),viewEleSeeds[i].surfPosY().x(),viewEleSeeds[i].surfPosZ().x()};
-						Vector3f surfRotation = {viewEleSeeds[i].surfRotX().x(),viewEleSeeds[i].surfRotY().x(),viewEleSeeds[i].surfRotZ().x()};
+						// Construct relative point-pair struct for applying quality cuts
+						EleRelPointPairPortable::EleRelPointPair<Vector3f> pair(hitPosition,propagatedPos,vertex);
+						float dPhiMax = getCutValue(et, 0.05, 20., -0.002);
+						float dRZMax = getCutValue(et, 9999., 0., 0);
+						float dRZ = pair.dZ();
+						if(viewEleSeeds[i].detectorID().x() != 1)
+							dRZ = pair.dPerp(); 
+						if ((dPhiMax >= 0 && std::abs(pair.dPhi()) > dPhiMax) || (dRZMax >= 0 && std::abs(dRZ) > dRZMax))
+							continue;
+						double zVertex = getZVtxFromExtrapolation(vertex, hitPosition,positionSC);
+						Vector3f vertexUpdated(vertex(0),vertex(1), zVertex);
 
-						Propagators::helixBarrelPlaneCrossing(position,momentum,rho,Propagators::oppositeToMomentum,surfPosition,surfRotation,theSolExists,x2,p2,s);
-						printf("Position : %lf and direction : %lf and path length : %lf",x2(0),p2(0),s);
+						printf("Position : (%lf,%lf,%lf) and direction : (%lf,%lf,%lf) and path length : %lf \n",propagatedPos(0),propagatedPos(1),propagatedPos(2),propagatedMom(0),propagatedMom(1),propagatedMom(2),s);
+						printf("Vertex Z updated %lf \n",zVertex);
+
 					}
-
-					printf("positionSC %lf  : %lf and direction : %lf",positionSC(0),x2(0),p2(0));
-					printf(" Vertex position : (%lf, %lf, %lf)\n",vertex(0),vertex(1),vertex(2));
 				}
 			}
 		}

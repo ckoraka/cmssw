@@ -1,7 +1,6 @@
 #include <Eigen/Core>
 
 #include "DataFormats/PortableTestObjects/interface/alpaka/TestDeviceCollection.h"
-
 #include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EgammaReco/interface/EleSeedSoA.h"
@@ -10,13 +9,16 @@
 #include "DataFormats/EgammaReco/interface/SuperclusterHostCollection.h"
 #include "DataFormats/EgammaReco/interface/alpaka/EleSeedDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/EleSeedHostCollection.h"
-#include "DataFormats/EgammaReco/interface/EleSeedHostCollection.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
-
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
+#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
+
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "MagneticField/ParametrizedEngine/interface/ParabolicParametrizedMagneticField.h"
+#include "Geometry/Records/interface/TrackerTopologyRcd.h"
+#include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
+#include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -36,19 +38,15 @@
 #include "HeterogeneousCore/AlpakaServices/interface/alpaka/AlpakaService.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/global/EDProducer.h"
 
-
-// Additional includes 
+// Additional includes for testing / comparing implementations
 #include "PixelMatchingAlgo.h"
-
+#include "RecoEgamma/EgammaElectronAlgos/interface/ElectronUtilities.h"
 #include "TrackingTools/MaterialEffects/interface/PropagatorWithMaterial.h"
 #include "DataFormats/GeometryCommonDetAlgo/interface/PerpendicularBoundPlaneBuilder.h"
-
 #include "TrackingTools/TrajectoryState/interface/ftsFromVertexToPoint.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/ftsFromVertexToPointPortable.h"
-
-//#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixPropagator.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixBarrelPlaneCrossingByCircle.h"
-
+#include "DataFormats/EgammaReco/interface/EleRelPointPairPortable.h"
 #include "DataFormats/EgammaReco/interface/Plane.h"
 
 using Vector3f = Eigen::Matrix<double, 3, 1>;
@@ -62,7 +60,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			size_{pset.getParameter<int32_t>("size")},
 			initialSeedsToken_(consumes(pset.getParameter<edm::InputTag>("initialSeeds"))),
 			beamSpotToken_(consumes(pset.getParameter<edm::InputTag>("beamSpot"))),
-			magFieldToken_(esConsumes())
+			magFieldToken_(esConsumes()),
+			geomToken(esConsumes())
 			{
 				superClustersTokens_ = consumes(pset.getParameter<edm::InputTag>("superClusters"));
 			}
@@ -77,8 +76,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 			std::cout<<" -----> NEW EVENT with vprim : "<<vprim_<<std::endl;
 
-			// Get MagField ESProduct for comparing 
+			// Get MagField ESProduct for comparing & Geom ESProduct 
 			auto const& magField = iSetup.getData(magFieldToken_);
+			const TrackerGeometry* theG = &iSetup.getData(geomToken);
 
 
 			PropagatorWithMaterial backwardPropagator_ = PropagatorWithMaterial(oppositeToMomentum, 0.000511, &magField);
@@ -108,7 +108,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			// Info on SoAs : https://github.com/cms-sw/cmssw/blob/master/DataFormats/SoATemplate/README.md
 
 			i = 0;
-			printf("Printed from host : \n");
 	        for (auto& superClusRef : event.get(superClustersTokens_)) 
 			{
 				viewSCs[i].scSeedTheta() =  superClusRef->seed()->position().theta();
@@ -126,7 +125,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				viewSeeds[i].nHits() = initialSeedRef.nHits();
 				
 				auto const& recHit = *(initialSeedRef.recHits().begin() + 0);  
-				//viewSeeds[i].detectorID().x() = recHit.geographicalId().subdetId() == PixelSubdetector::PixelBarrel ? 1: 0;
+				viewSeeds[i].detectorID().x() = recHit.geographicalId().subdetId() == PixelSubdetector::PixelBarrel ? 1: 0;
 				viewSeeds[i].isValid().x() = recHit.isValid();
 				viewSeeds[i].hitPosX().x() = recHit.globalPosition().x();
 				viewSeeds[i].hitPosY().x() = recHit.globalPosition().y();
@@ -139,7 +138,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				viewSeeds[i].surfRotZ().x() = recHit.det()->surface().rotation().z().z();
 
 				auto const& recHit1 = *(initialSeedRef.recHits().begin() + 1);  
-				//viewSeeds[i].detectorID().y() = recHit1.geographicalId().subdetId() == PixelSubdetector::PixelBarrel ? 1: 0;
+				viewSeeds[i].detectorID().y() = recHit1.geographicalId().subdetId() == PixelSubdetector::PixelBarrel ? 1: 0;
 				viewSeeds[i].isValid().y() = recHit1.isValid();
 				viewSeeds[i].hitPosX().y() = recHit1.globalPosition().x();
 				viewSeeds[i].hitPosY().y() = recHit1.globalPosition().y();
@@ -153,7 +152,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 				if(initialSeedRef.nHits()>2){
 					auto const& recHit2 = *(initialSeedRef.recHits().begin() + 2);  
-					//viewSeeds[i].detectorID().z() = recHit2.geographicalId().subdetId() == PixelSubdetector::PixelBarrel ? 1: 0;
+					viewSeeds[i].detectorID().z() = recHit2.geographicalId().subdetId() == PixelSubdetector::PixelBarrel ? 1: 0;
 					viewSeeds[i].isValid().z() = recHit2.isValid();
 					viewSeeds[i].hitPosX().z() = recHit2.globalPosition().x();
 					viewSeeds[i].hitPosY().z() = recHit2.globalPosition().y();
@@ -166,6 +165,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 					viewSeeds[i].surfRotZ().z() = recHit2.det()->surface().rotation().z().z();		
 				}
 				else{
+					viewSeeds[i].detectorID().z() = 0;
 					viewSeeds[i].isValid().z() = 0;
 					viewSeeds[i].hitPosX().z() = 0;
 					viewSeeds[i].hitPosY().z() = 0;
@@ -185,11 +185,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			alpaka::memcpy(event.queue(), deviceProductSeeds.buffer(), hostProductSeeds.buffer());
 
 			// Print the SoA 
-			algo_.printEleSeeds(event.queue(), deviceProductSeeds);
-			algo_.printSCs(event.queue(), deviceProductSCs);
-			//algo_.matchSeeds(event.queue(), deviceProductSeeds, deviceProductSCs,vertex(0),vertex(1), vertex(2));
+			//algo_.printEleSeeds(event.queue(), deviceProductSeeds);
+			//algo_.printSCs(event.queue(), deviceProductSCs);
+
+			// Matching algorithm
+			algo_.matchSeeds(event.queue(), deviceProductSeeds, deviceProductSCs,vertex(0),vertex(1), vertex(2));
 
 
+
+			// For testing developments wrt legacy implementations
 	        for (auto& superClusRef : event.get(superClustersTokens_)) 
 			{
 				float x = superClusRef->position().r() * sin(superClusRef->seed()->position().theta()) * cos(superClusRef->position().phi());
@@ -223,6 +227,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 					double s = 0.;
 				
 					bool theSolExists = false;
+					Vector3f recHitpos{recHit.globalPosition().x(),recHit.globalPosition().y(),recHit.globalPosition().z()};
 					Vector3f surfPosition{recHit.det()->surface().position().x(),recHit.det()->surface().position().y(),recHit.det()->surface().position().z()};
 					Vector3f surfRotation{recHit.det()->surface().rotation().z().x(),recHit.det()->surface().rotation().z().y(),recHit.det()->surface().rotation().z().z()};
 
@@ -256,7 +261,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 						std::cout<<" test plane stuff localZ "<< -plane.localZ(testposition) << "recHit.det()->surface().normalVector "<< -recHit.det()->surface().localZ(GlobalPoint(initialTrajState.globalPosition()))<<std::endl;
 						std::cout<<" Initial: "<< state.globalParameters().position()<<"   and new "<< x2(0) <<" "<< x2(1) << " "<< x2(2)<<std::endl;
 						std::cout<<" Initial: "<< state.globalParameters().momentum()<<"   and new "<< p2(0) <<" "<< p2(1) << " "<< p2(2)<<std::endl;
+						std::cout<<" The path length is : "<< s << std::endl;
+						EleRelPointPair pointPair(recHit.globalPosition(), state.globalParameters().position(), vprim);
+						EleRelPointPairPortable::EleRelPointPair<Vector3f> pair(recHitpos,x2,vertex);
+						printf("Old point pair dZ %lf, dPerp %lf, and dPhi %lf\n",pointPair.dZ(),pointPair.dPerp(),pointPair.dPhi());
+						printf("New point pair dZ %lf, dPerp %lf, and dPhi %lf \n",pair.dZ(),pair.dPerp(),pair.dPhi());
 					}
+
 				}
 
 				if(false){
@@ -285,6 +296,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		const edm::EDGetTokenT<TrajectorySeedCollection> initialSeedsToken_;
 		const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
 		edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magFieldToken_;
+		const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken;
 		edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
 		PixelMatchingAlgo const algo_{};
   };
