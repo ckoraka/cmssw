@@ -111,6 +111,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			for (int32_t i : uniform_elements(acc,sizeEleSeeds)) 
 			{
 
+				printf("New seed \n");
+
 				if(!(viewEleSeeds[i].isValid().x()))
 					continue;
 
@@ -118,6 +120,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				Vector3f hitPosition  = {viewEleSeeds[i].hitPosX().x(),viewEleSeeds[i].hitPosY().x(),viewEleSeeds[i].hitPosZ().x()};
 				Vector3f surfPosition = {viewEleSeeds[i].surfPosX().x(),viewEleSeeds[i].surfPosY().x(),viewEleSeeds[i].surfPosZ().x()};
 				Vector3f surfRotation = {viewEleSeeds[i].surfRotX().x(),viewEleSeeds[i].surfRotY().x(),viewEleSeeds[i].surfRotZ().x()};
+
+				//Vector3f hit2Position  = {viewEleSeeds[i].hitPosX().y(),viewEleSeeds[i].hitPosY().y(),viewEleSeeds[i].hitPosZ().y()};
+				Vector3f surf2Position = {viewEleSeeds[i].surfPosX().y(),viewEleSeeds[i].surfPosY().y(),viewEleSeeds[i].surfPosZ().y()};
+				Vector3f surf2Rotation = {viewEleSeeds[i].surfRotX().y(),viewEleSeeds[i].surfRotY().y(),viewEleSeeds[i].surfRotZ().y()};
 
 				for(int32_t j : uniform_elements(acc,sizeSCs)) 
 				{
@@ -141,7 +147,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 						bool theSolExists = false; 
 						Vector3f propagatedPos = {0,0,0};
 						Vector3f propagatedMom = {0,0,0}; 
-						double rho = transverseCurvature(momentum,1,magneticFieldParabolicPortable::magneticFieldAtPoint(positionSC));
+						double rho = transverseCurvature(momentum,charge,magneticFieldParabolicPortable::magneticFieldAtPoint(positionSC));
 						Propagators::helixBarrelPlaneCrossing(position,momentum,rho,Propagators::oppositeToMomentum,surfPosition,surfRotation,theSolExists,propagatedPos,propagatedMom,s);
 						if(!theSolExists)
 							continue;
@@ -163,6 +169,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 						printf("Position : (%lf,%lf,%lf) and direction : (%lf,%lf,%lf) and path length : %lf \n",propagatedPos(0),propagatedPos(1),propagatedPos(2),propagatedMom(0),propagatedMom(1),propagatedMom(2),s);
 						printf("Vertex Z updated %lf \n",zVertex);
+
+						// Move to the second hit of the seed
+						if(!(viewEleSeeds[i].isValid().y()))
+							continue;	
+						auto firstMatchFreeTraj = ftsFromVertexToPointPortable::ftsFromVertexToPoint(hitPosition,vertexUpdated,viewSCs[j].scEnergy(),charge,magneticFieldParabolicPortable::magneticFieldAtPoint(hitPosition));									
+						Vector3f position2 = {firstMatchFreeTraj.position(0),firstMatchFreeTraj.position(1),firstMatchFreeTraj.position(2)};
+						Vector3f momentum2 = {firstMatchFreeTraj.momentum(0),firstMatchFreeTraj.momentum(1),firstMatchFreeTraj.momentum(2)};
+						rho = transverseCurvature(momentum2,charge,magneticFieldParabolicPortable::magneticFieldAtPoint(hitPosition));
+						theSolExists = false; 
+						propagatedPos = {0,0,0};
+						propagatedMom = {0,0,0}; 
+						Propagators::helixBarrelPlaneCrossing(position2,momentum2,rho,Propagators::alongMomentum,surf2Position,surf2Rotation,theSolExists,propagatedPos,propagatedMom,s);
+						if(!theSolExists)
+							continue;
+						printf("Position : (%lf,%lf,%lf) and direction : (%lf,%lf,%lf) and path length : %lf \n",propagatedPos(0),propagatedPos(1),propagatedPos(2),propagatedMom(0),propagatedMom(1),propagatedMom(2),s);
 
 					}
 				}

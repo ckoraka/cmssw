@@ -190,8 +190,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 			// Matching algorithm
 			algo_.matchSeeds(event.queue(), deviceProductSeeds, deviceProductSCs,vertex(0),vertex(1), vertex(2));
-
-
+      		//alpaka::wait(event.queue());			
 
 			// For testing developments wrt legacy implementations
 	        for (auto& superClusRef : event.get(superClustersTokens_)) 
