@@ -47,6 +47,9 @@
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/ftsFromVertexToPointPortable.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixBarrelPlaneCrossingByCircle.h"
 #include "DataFormats/EgammaReco/interface/EleRelPointPairPortable.h"
+#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixArbitraryPlaneCrossing.h"
+#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixArbitraryPlaneCrossing2Order.h"
+
 #include "DataFormats/EgammaReco/interface/Plane.h"
 
 using Vector3f = Eigen::Matrix<double, 3, 1>;
@@ -189,7 +192,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			//algo_.printSCs(event.queue(), deviceProductSCs);
 
 			// Matching algorithm
-			algo_.matchSeeds(event.queue(), deviceProductSeeds, deviceProductSCs,vertex(0),vertex(1), vertex(2));
+			//algo_.matchSeeds(event.queue(), deviceProductSeeds, deviceProductSCs,vertex(0),vertex(1), vertex(2));
       		//alpaka::wait(event.queue());			
 
 			// For testing developments wrt legacy implementations
@@ -234,6 +237,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 					Vector3f p2{0,0,0};
 
 					rho = transverseCurvature(testmomentum,1,magneticFieldParabolicPortable::magneticFieldAtPoint(position));
+
 					Propagators::helixBarrelPlaneCrossing(testposition,testmomentum,rho,Propagators::oppositeToMomentum,surfPosition,surfRotation,theSolExists,x2,p2,s);
 					if(!theSolExists)
 						continue;
@@ -267,8 +271,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 						printf("New point pair dZ %lf, dPerp %lf, and dPhi %lf \n",pair.dZ(),pair.dPerp(),pair.dPhi());
 					}
 
+					if(true){
+						// Testing the helixArbitraryPlaneCrssing
+						s = 0.;
+						x2 = {0,0,0};
+						p2 = {0,0,0};
+						theSolExists = false;
+			            PlanePortable::Plane<Vector3f> plane{surfPosition,surfRotation};
+						Propagators::helixArbitraryPlaneCrossing(testposition,testmomentum,rho,Propagators::oppositeToMomentum,plane,s,x2,p2,theSolExists);
+						p2.normalize(); 
+						p2*= testmomentum.norm();
+						std::cout<<" Initial: "<< state.globalParameters().position()<<"   and new "<< x2(0) <<" "<< x2(1) << " "<< x2(2)<<std::endl;
+						std::cout<<" Initial: "<< state.globalParameters().momentum()<<"   and new "<< p2(0) <<" "<< p2(1) << " "<< p2(2)<<std::endl;
+					}
 				}
-
+				
 				if(false){
 					printf("Print out legacy fts position %f and new fts position  and %lf \n",freeTS.position().x(), testposition(0));
 					printf("For SC i=%d Energy is :%f , theta is :%f,  r is : %f \n",i,superClusRef->energy(),superClusRef->seed()->position().theta(),superClusRef->position().r()) ;

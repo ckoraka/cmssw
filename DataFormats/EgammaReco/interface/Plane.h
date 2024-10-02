@@ -11,6 +11,10 @@ namespace PlanePortable {
         Vec3 position;
         Vec3 rotation; // This is rotation().z()
 
+        constexpr Vec3 pos() const {
+            return position;
+        }
+
         // Returns the normal vector of the plane
         constexpr Vec3 normalVector() const {
             return rotation;
