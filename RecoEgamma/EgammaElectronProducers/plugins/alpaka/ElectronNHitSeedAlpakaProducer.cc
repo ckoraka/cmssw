@@ -49,6 +49,7 @@
 #include "DataFormats/EgammaReco/interface/EleRelPointPairPortable.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixArbitraryPlaneCrossing.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixArbitraryPlaneCrossing2Order.h"
+#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixForwardPlaneCrossing.h"
 
 #include "DataFormats/EgammaReco/interface/Plane.h"
 
@@ -195,6 +196,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			//algo_.matchSeeds(event.queue(), deviceProductSeeds, deviceProductSCs,vertex(0),vertex(1), vertex(2));
       		//alpaka::wait(event.queue());			
 
+
 			// For testing developments wrt legacy implementations
 	        for (auto& superClusRef : event.get(superClustersTokens_)) 
 			{
@@ -208,89 +210,109 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                 superClusRef->position().phi(),    //supercluster phi
                                                 superClusRef->position().r()));    //supercluster r
 			
-				auto freeTS = trackingTools::ftsFromVertexToPoint(magField, sc, vprim, superClusRef->energy(), 1);
-				auto initialTrajState = TrajectoryStateOnSurface(freeTS, *PerpendicularBoundPlaneBuilder{}(freeTS.position(), freeTS.momentum()));
+				for (int charge : {1,-1}) 
+				{
+					auto freeTS = trackingTools::ftsFromVertexToPoint(magField, sc, vprim, superClusRef->energy(), 1);
+					auto initialTrajState = TrajectoryStateOnSurface(freeTS, *PerpendicularBoundPlaneBuilder{}(freeTS.position(), freeTS.momentum()));
 
-				auto newfreeTS = ftsFromVertexToPointPortable::ftsFromVertexToPoint(position, vertex, superClusRef->energy(),1,magneticFieldParabolicPortable::magneticFieldAtPoint(position));			
-				Vector3f testposition = {newfreeTS.position(0),newfreeTS.position(1),newfreeTS.position(2)};
-				Vector3f testmomentum = {newfreeTS.momentum(0),newfreeTS.momentum(1),newfreeTS.momentum(2)};
+					auto newfreeTS = ftsFromVertexToPointPortable::ftsFromVertexToPoint(position, vertex, superClusRef->energy(),charge,magneticFieldParabolicPortable::magneticFieldAtPoint(position));			
+					Vector3f testposition = {newfreeTS.position(0),newfreeTS.position(1),newfreeTS.position(2)};
+					Vector3f testmomentum = {newfreeTS.momentum(0),newfreeTS.momentum(1),newfreeTS.momentum(2)};
 
-				auto transverseCurvature = [](const Vector3f& p, int charge, const float& magneticFieldZ) -> float {
-   			 			return -2.99792458e-3f * (charge / sqrt(p(0) * p(0) + p(1) * p(1))) * magneticFieldZ;  
-				};
+					auto transverseCurvature = [](const Vector3f& p, int charge, const float& magneticFieldZ) -> float {
+							return -2.99792458e-3f * (charge / sqrt(p(0) * p(0) + p(1) * p(1))) * magneticFieldZ;  
+					};
 
-				for (auto& initialSeedRef : event.get(initialSeedsToken_)) 
-				{			
-					auto const& recHit = *(initialSeedRef.recHits().begin() + 0);  
-					if(!recHit.isValid())      
-						continue;
+					int notValid_old = 0;
+					int notValid_new = 0;
+					int seeds = 0;
+					for (auto& initialSeedRef : event.get(initialSeedsToken_)) 
+					{			
+						++seeds;
+						auto const& recHit = *(initialSeedRef.recHits().begin() + 0);  
 
-					double rho = 0.;
-					double s = 0.;
-				
-					bool theSolExists = false;
-					Vector3f recHitpos{recHit.globalPosition().x(),recHit.globalPosition().y(),recHit.globalPosition().z()};
-					Vector3f surfPosition{recHit.det()->surface().position().x(),recHit.det()->surface().position().y(),recHit.det()->surface().position().z()};
-					Vector3f surfRotation{recHit.det()->surface().rotation().z().x(),recHit.det()->surface().rotation().z().y(),recHit.det()->surface().rotation().z().z()};
+						if(!recHit.isValid())      
+							continue;
 
-					Vector3f x2{0,0,0};
-					Vector3f p2{0,0,0};
+						auto state = backwardPropagator_.propagate(initialTrajState, recHit.det()->surface());
 
-					rho = transverseCurvature(testmomentum,1,magneticFieldParabolicPortable::magneticFieldAtPoint(position));
+						if(!state.isValid())      
+							++notValid_old;
 
-					Propagators::helixBarrelPlaneCrossing(testposition,testmomentum,rho,Propagators::oppositeToMomentum,surfPosition,surfRotation,theSolExists,x2,p2,s);
-					if(!theSolExists)
-						continue;
+						Vector3f recHitpos{recHit.globalPosition().x(),recHit.globalPosition().y(),recHit.globalPosition().z()};
+						Vector3f surfPosition{recHit.det()->surface().position().x(),recHit.det()->surface().position().y(),recHit.det()->surface().position().z()};
+						Vector3f surfRotation{recHit.det()->surface().rotation().z().x(),recHit.det()->surface().rotation().z().y(),recHit.det()->surface().rotation().z().z()};
+						Vector3f x2{0,0,0};
+						Vector3f p2{0,0,0};
+						double rho = 0.;
+						double s = 0.;					
+						bool theSolExists = false;
 
-					auto state = backwardPropagator_.propagate(initialTrajState, recHit.det()->surface());
-					if(!state.isValid())
-						continue;
+						PlanePortable::Plane<Vector3f> plane{surfPosition,surfRotation};
+						rho = transverseCurvature(testmomentum,charge,magneticFieldParabolicPortable::magneticFieldAtPoint(position));
 
-					// Momentum should be renormalized - might want to add this in propagator ?
-					p2.normalize(); 
-					p2*= testmomentum.norm();
+						constexpr float small = 1.e-6;  // for orientation of planes
+						auto u = plane.normalVector();
+						if (std::abs(u(2)) < small) {
+							// HelixBarrelPlaneCrossing,
+							Propagators::helixBarrelPlaneCrossing(testposition,testmomentum,rho,Propagators::oppositeToMomentum,surfPosition,surfRotation,theSolExists,x2,p2,s);
+						} 
+						else if ((std::abs(u(0)) < small) && (std::abs(u(1)) < small)) 
+						{
+							// forward plane HelixForwardPlaneCrossing
+							Propagators::helixForwardPlaneCrossing(testposition,testmomentum,rho,Propagators::oppositeToMomentum,plane,s,x2,p2,theSolExists);
+						} 
+						else {
+							// arbitrary plane HelixArbitraryPlaneCrossing
+							Propagators::helixBarrelPlaneCrossing(testposition,testmomentum,rho,Propagators::oppositeToMomentum,surfPosition,surfRotation,theSolExists,x2,p2,s);
+							//Propagators::helixArbitraryPlaneCrossing(testposition,testmomentum,rho,Propagators::oppositeToMomentum,plane,s,x2,p2,theSolExists); // Should check if there is a logic bug - giving similar results but also non valid solutions
+						}
 
-					if(false){
-			            PlanePortable::Plane<Vector3f> plane{surfPosition,surfRotation};
-						std::cout<<" New "<< rho <<"  and old "<<freeTS.transverseCurvature() <<std::endl;
-						std::cout<<" recHit.det()->surface().position() "<<recHit.det()->surface().position()<<" rotation? "<<recHit.det()->surface().rotation().z()<<std::endl;
-						std::cout<<" Print out legacy fts position "<< freeTS.position() <<"  and new implementation one : "<<testposition(0) <<" "<<testposition(1)<<" "<<testposition(2)<<std::endl;
-						std::cout<<" Print out legacy fts momentum "<< freeTS.momentum() <<"  and new implementation one : "<<testmomentum(0) <<" "<<testmomentum(1)<<" "<<testmomentum(2) <<std::endl;
-						std::cout<<" initialTrajState pos "<< initialTrajState.globalPosition()<<"  and momentum  "<<initialTrajState.globalMomentum()<<std::endl;
-						std::cout<<" surfPosition " <<surfPosition(0)<<" "<<surfPosition(1)<<" "<<surfPosition(2)<<std::endl;
-						std::cout<<" surfRotation " <<surfRotation(0)<<" "<<surfRotation(1)<<" "<<surfRotation(2)<<std::endl;
-						std::cout<<" pt = startingDir.head(2).norm() "<< testmomentum.head(2).norm() << " and the equivalent "<< initialTrajState.globalMomentum().perp() <<std::endl;
-						std::cout<<" test plane stuff  norm vec"<< plane.normalVector() << "recHit.det()->surface().normalVector "<<recHit.det()->surface().normalVector()<<std::endl;
-						std::cout<<" test plane stuff localZ "<< -plane.localZ(testposition) << "recHit.det()->surface().normalVector "<< -recHit.det()->surface().localZ(GlobalPoint(initialTrajState.globalPosition()))<<std::endl;
-						std::cout<<" Initial: "<< state.globalParameters().position()<<"   and new "<< x2(0) <<" "<< x2(1) << " "<< x2(2)<<std::endl;
-						std::cout<<" Initial: "<< state.globalParameters().momentum()<<"   and new "<< p2(0) <<" "<< p2(1) << " "<< p2(2)<<std::endl;
-						std::cout<<" The path length is : "<< s << std::endl;
-						EleRelPointPair pointPair(recHit.globalPosition(), state.globalParameters().position(), vprim);
-						EleRelPointPairPortable::EleRelPointPair<Vector3f> pair(recHitpos,x2,vertex);
-						printf("Old point pair dZ %lf, dPerp %lf, and dPhi %lf\n",pointPair.dZ(),pointPair.dPerp(),pointPair.dPhi());
-						printf("New point pair dZ %lf, dPerp %lf, and dPhi %lf \n",pair.dZ(),pair.dPerp(),pair.dPhi());
-					}
+						if(!theSolExists)
+							++notValid_new;
 
-					if(true){
-						// Testing the helixArbitraryPlaneCrssing
-						s = 0.;
-						x2 = {0,0,0};
-						p2 = {0,0,0};
-						theSolExists = false;
-			            PlanePortable::Plane<Vector3f> plane{surfPosition,surfRotation};
-						Propagators::helixArbitraryPlaneCrossing(testposition,testmomentum,rho,Propagators::oppositeToMomentum,plane,s,x2,p2,theSolExists);
+						if(!state.isValid())
+							continue;
+
+						if(!theSolExists)
+							continue;
+
 						p2.normalize(); 
 						p2*= testmomentum.norm();
-						std::cout<<" Initial: "<< state.globalParameters().position()<<"   and new "<< x2(0) <<" "<< x2(1) << " "<< x2(2)<<std::endl;
-						std::cout<<" Initial: "<< state.globalParameters().momentum()<<"   and new "<< p2(0) <<" "<< p2(1) << " "<< p2(2)<<std::endl;
+
+						if(false){
+							std::cout<<" New "<< rho <<"  and old "<<freeTS.transverseCurvature() <<std::endl;
+							std::cout<<" recHit.det()->surface().position() "<<recHit.det()->surface().position()<<" rotation? "<<recHit.det()->surface().rotation().z()<<std::endl;
+							std::cout<<" Print out legacy fts position "<< freeTS.position() <<"  and new implementation one : "<<testposition(0) <<" "<<testposition(1)<<" "<<testposition(2)<<std::endl;
+							std::cout<<" Print out legacy fts momentum "<< freeTS.momentum() <<"  and new implementation one : "<<testmomentum(0) <<" "<<testmomentum(1)<<" "<<testmomentum(2) <<std::endl;
+							std::cout<<" initialTrajState pos "<< initialTrajState.globalPosition()<<"  and momentum  "<<initialTrajState.globalMomentum()<<std::endl;
+							std::cout<<" surfPosition " <<surfPosition(0)<<" "<<surfPosition(1)<<" "<<surfPosition(2)<<std::endl;
+							std::cout<<" surfRotation " <<surfRotation(0)<<" "<<surfRotation(1)<<" "<<surfRotation(2)<<std::endl;
+							std::cout<<" pt = startingDir.head(2).norm() "<< testmomentum.head(2).norm() << " and the equivalent "<< initialTrajState.globalMomentum().perp() <<std::endl;
+							std::cout<<" test plane stuff  norm vec"<< plane.normalVector() << "recHit.det()->surface().normalVector "<<recHit.det()->surface().normalVector()<<std::endl;
+							std::cout<<" test plane stuff localZ "<< -plane.localZ(testposition) << "recHit.det()->surface().normalVector "<< -recHit.det()->surface().localZ(GlobalPoint(initialTrajState.globalPosition()))<<std::endl;
+							std::cout<<" Initial: "<< state.globalParameters().position()<<"   and new "<< x2(0) <<" "<< x2(1) << " "<< x2(2)<<std::endl;
+							std::cout<<" Initial: "<< state.globalParameters().momentum()<<"   and new "<< p2(0) <<" "<< p2(1) << " "<< p2(2)<<std::endl;
+							std::cout<<" The path length is : "<< s << std::endl;
+							EleRelPointPair pointPair(recHit.globalPosition(), state.globalParameters().position(), vprim);
+							EleRelPointPairPortable::EleRelPointPair<Vector3f> pair(recHitpos,x2,vertex);
+							printf("Old point pair dZ %lf, dPerp %lf, and dPhi %lf\n",pointPair.dZ(),pointPair.dPerp(),pointPair.dPhi());
+							printf("New point pair dZ %lf, dPerp %lf, and dPhi %lf \n",pair.dZ(),pair.dPerp(),pair.dPhi());
+						}
+
+						if(false){
+							std::cout<<" Initial: "<< state.globalParameters().position()<<"   and new "<< x2(0) <<" "<< x2(1) << " "<< x2(2)<<std::endl;
+							std::cout<<" Initial: "<< state.globalParameters().momentum()<<"   and new "<< p2(0) <<" "<< p2(1) << " "<< p2(2)<<std::endl;
+						}
 					}
-				}
-				
-				if(false){
-					printf("Print out legacy fts position %f and new fts position  and %lf \n",freeTS.position().x(), testposition(0));
-					printf("For SC i=%d Energy is :%f , theta is :%f,  r is : %f \n",i,superClusRef->energy(),superClusRef->seed()->position().theta(),superClusRef->position().r()) ;
-					printf(" view %lf ", viewSCs[i].scR());
-					printf("Magnetic field full  = %f and the parabolic approximation %f ", theMagField, magneticFieldParabolicPortable::magneticFieldAtPoint(position));
+
+					std::cout<<"Number of seeds: "<<seeds<<" Propagation notValid_old "<< notValid_old << "  notValid_new " <<notValid_new<<std::endl;
+					if(false){
+						printf("Print out legacy fts position %f and new fts position  and %lf \n",freeTS.position().x(), testposition(0));
+						printf("For SC i=%d Energy is :%f , theta is :%f,  r is : %f \n",i,superClusRef->energy(),superClusRef->seed()->position().theta(),superClusRef->position().r()) ;
+						printf(" view %lf ", viewSCs[i].scR());
+						printf("Magnetic field full  = %f and the parabolic approximation %f ", theMagField, magneticFieldParabolicPortable::magneticFieldAtPoint(position));
+					}
 				}
 			}
 

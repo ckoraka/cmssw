@@ -44,7 +44,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                 point(2) + s * cosTheta);
             }        
             else {
-    
                 double st = theCachedS / sinThetaI;
                 return Vector3f(point(0)  + (cosPhi0 - (st * 0.5 * rho) * sinPhi0) * st,
                                 point(1) + (sinPhi0 + (st * 0.5 * rho) * cosPhi0) * st,
@@ -163,6 +162,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             // Prepare iterations: count and total pathlength
             //
 
+            pathLength = pathLength2O;
             auto iteration = maxIterations;
             while (notAtSurface(plane, xnew, safeMaxDist)) 
             {
@@ -172,7 +172,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                     return;
                 }
 
-                Vector3f pnew = directionInDouble(pathLength2O, point, curvature, cosPhi0, sinPhi0, cosTheta, sinTheta, sinThetaI,
+            
+                Vector3f pnew = directionInDouble(pathLength, point, curvature, cosPhi0, sinPhi0, cosTheta, sinTheta, sinThetaI,
                                                 theCachedS,theCachedDPhi,theCachedSDPhi,theCachedCDPhi);
 
                 double tmpPathLength = 0.;

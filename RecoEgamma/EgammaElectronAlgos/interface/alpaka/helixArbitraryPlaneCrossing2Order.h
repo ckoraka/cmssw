@@ -67,9 +67,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 						path = propSign * s1;
 					}
 				}
-				//if (edm::isNotFinite(path))
-				//	valid = false;
-				if(fabs(path)>99999)
+
+				if(!(std::isfinite(path)))
 					valid = false;
 
 				return std::pair<bool, double>(valid, path);
@@ -156,78 +155,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				// Calculate position and direction
 				position = PlaneCrossing2Order::positionInDouble(curvature, pathLength, theX0, theY0, theZ0, theCosPhi0, theSinPhi0, theCosTheta, theSinThetaI);
 				directionOut = PlaneCrossing2Order::directionInDouble(curvature, pathLength, theCosPhi0, theSinPhi0, theCosTheta, theSinThetaI);
-			}
-		}
-
-		ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void helixArbitraryPlaneCrossing2Order2(
-			double x0,
-			double y0,
-			double z0,
-			double cosPhi0,
-			double sinPhi0,
-			double cosTheta,
-			double sinTheta,
-			double rho,
-			PropagationDirection propDir,
-			const PlanePortable::Plane<Vector3f> plane,
-			double& pathLength,
-			bool& validPath,
-			Vector3f& position,
-			Vector3f& directionOut) {
-
-			// Second constructor type
-			double theX0 = x0;
-			double theY0 = y0;
-			double theZ0 = z0;
-			double theCosPhi0 = cosPhi0;
-			double theSinPhi0 = sinPhi0;
-			double theCosTheta = cosTheta;
-			double theSinThetaI = 1.0 / sinTheta; // assuming sinTheta is not zero
-
-			// Get normal vector of the plane
-			Vector3f normalToPlane = plane.normalVector();
-			double nPx = normalToPlane(0);
-			double nPy = normalToPlane(1);
-			double nPz = normalToPlane(2);
-			double cP = plane.localZ(Vector3f(x0, y0, z0));
-
-			// Coefficients of the 2nd order equation
-			double ceq1 = rho * (nPx * theSinPhi0 - nPy * theCosPhi0);
-			double ceq2 = nPx * theCosPhi0 + nPy * theSinPhi0 + nPz * theCosTheta * theSinThetaI;
-			double ceq3 = cP;
-
-			// Check for degeneration to linear equation
-			double dS1, dS2;
-			if (std::abs(ceq1) > FLT_MIN) {
-				double deq1 = ceq2 * ceq2;
-				double deq2 = ceq1 * ceq3;
-				if (std::abs(deq1) < FLT_MIN || std::abs(deq2 / deq1) > 1.e-6) {
-					double deq = deq1 + 2 * deq2;
-					if (deq < 0.)
-						validPath = false;
-					double ceq = ceq2 + std::copysign(std::sqrt(deq), ceq2);
-					dS1 = (ceq / ceq1) * theSinThetaI;
-					dS2 = -2. * (ceq3 / ceq) * theSinThetaI;
-				} else {
-					double ceq = (ceq2 / ceq1) * theSinThetaI;
-					double deq = deq2 / deq1;
-					deq *= (1 - 0.5 * deq);
-					dS1 = -ceq * deq;
-					dS2 = ceq * (2 + deq);
-				}
-			} else {
-				dS1 = dS2 = -(ceq3 / ceq2) * theSinThetaI;
-			}
-
-			// Choose solution based on direction
-			std::pair<bool, double> solution = PlaneCrossing2Order::solutionByDirection(dS1, dS2, propDir);
-			validPath = solution.first;
-			pathLength = solution.second;
-
-			if (validPath) {
-				// Calculate position and direction
-				position = PlaneCrossing2Order::positionInDouble(rho, pathLength, theX0, theY0, theZ0, theCosPhi0, theSinPhi0, theCosTheta, theSinThetaI);
-				directionOut = PlaneCrossing2Order::directionInDouble(rho, pathLength, theCosPhi0, theSinPhi0, theCosTheta, theSinThetaI);
 			}
 		}
 
