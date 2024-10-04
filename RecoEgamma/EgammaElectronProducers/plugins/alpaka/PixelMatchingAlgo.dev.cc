@@ -52,8 +52,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 									reco::SuperclusterDeviceCollection::View view,
 									int32_t size) const 
 		{
-			const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
-			printf("Printed from device : \n");
+			//const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
 			for (int32_t i : uniform_elements(acc, size)) 
 			{
 				printf("For SC i=%d Energy is :%f , theta is :%f , and r is %lf and phi is %lf,  \n",i,view[i].scEnergy(),view[i].scSeedTheta(), view[i].scR(),view[i].scPhi() ) ;
@@ -76,7 +75,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 									reco::EleSeedDeviceCollection::View view,
 									int32_t size) const 
 		{
-			const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
+			//const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
 			printf("Printed from device : \n");
 			for (int32_t i : uniform_elements(acc, size)) 
 			{
@@ -84,7 +83,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				printf("Hit 0 position is (%lf , %lf , %lf ) \n", view[i].hitPosX().x(),view[i].hitPosY().x(),view[i].hitPosZ().x());
 				printf("Hit 1 position is (%lf , %lf , %lf ) \n", view[i].hitPosX().y(),view[i].hitPosY().y(),view[i].hitPosZ().y());
 				if(view[i].nHits()>2)
-					printf("Hit 2 position is (%lf , %lf , %lf \n) ", view[i].hitPosX().z(),view[i].hitPosY().z(),view[i].hitPosZ().z());
+					printf("Hit 2 position is (%lf , %lf , %lf ) \n ", view[i].hitPosX().z(),view[i].hitPosY().z(),view[i].hitPosZ().z());
 			}
 		}
 	};
@@ -104,14 +103,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 										double vtx_z) const 
 		{
 
-			const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
+			//const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
 
 			Vector3f vertex = {vtx_x,vtx_y,vtx_z}; 
 
 			for (int32_t i : uniform_elements(acc,sizeEleSeeds)) 
 			{
-
-				printf("New seed \n");
 
 				if(!(viewEleSeeds[i].isValid().x()))
 					continue;
@@ -121,7 +118,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				Vector3f surfPosition = {viewEleSeeds[i].surfPosX().x(),viewEleSeeds[i].surfPosY().x(),viewEleSeeds[i].surfPosZ().x()};
 				Vector3f surfRotation = {viewEleSeeds[i].surfRotX().x(),viewEleSeeds[i].surfRotY().x(),viewEleSeeds[i].surfRotZ().x()};
 
-				//Vector3f hit2Position  = {viewEleSeeds[i].hitPosX().y(),viewEleSeeds[i].hitPosY().y(),viewEleSeeds[i].hitPosZ().y()};
+				Vector3f hit2Position  = {viewEleSeeds[i].hitPosX().y(),viewEleSeeds[i].hitPosY().y(),viewEleSeeds[i].hitPosZ().y()};
 				Vector3f surf2Position = {viewEleSeeds[i].surfPosX().y(),viewEleSeeds[i].surfPosY().y(),viewEleSeeds[i].surfPosZ().y()};
 				Vector3f surf2Rotation = {viewEleSeeds[i].surfRotX().y(),viewEleSeeds[i].surfRotY().y(),viewEleSeeds[i].surfRotZ().y()};
 
@@ -181,10 +178,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 						propagatedPos = {0,0,0};
 						propagatedMom = {0,0,0}; 
 						Propagators::helixBarrelPlaneCrossing(position2,momentum2,rho,Propagators::alongMomentum,surf2Position,surf2Rotation,theSolExists,propagatedPos,propagatedMom,s);
+						propagatedMom.normalize(); 
+						propagatedMom*= momentum.norm();
 						if(!theSolExists)
 							continue;
 						printf("Position : (%lf,%lf,%lf) and direction : (%lf,%lf,%lf) and path length : %lf \n",propagatedPos(0),propagatedPos(1),propagatedPos(2),propagatedMom(0),propagatedMom(1),propagatedMom(2),s);
-
+						EleRelPointPairPortable::EleRelPointPair<Vector3f> pair2(hit2Position,propagatedPos,vertexUpdated);
+						dPhiMax = getCutValue(et, 0.003, 0., 0.);
+						dRZMax = getCutValue(et, 0.05, 30., -0.002);
+						dRZ = pair2.dZ();
+						if(viewEleSeeds[i].detectorID().y() != 1)
+							dRZ = pair2.dPerp(); 
+						if ((dPhiMax >= 0 && std::abs(pair2.dPhi()) > dPhiMax) || (dRZMax >= 0 && std::abs(dRZ) > dRZMax))
+							continue;
 					}
 				}
 			}

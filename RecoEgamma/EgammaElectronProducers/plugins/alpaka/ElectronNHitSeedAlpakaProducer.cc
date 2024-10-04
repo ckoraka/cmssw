@@ -106,6 +106,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			auto& viewSCs = hostProductSCs.view();
 			auto& viewSeeds = hostProductSeeds.view();
 
+
+			// In order to write out a reduced collection of matched seeds?
+			// Might want to create some sort of assiciation SoA
+			//reco::EleSeedHostCollection modifiedHostProductSeeds{i, event.queue()};
+			//reco::EleSeedDeviceCollection modifieddeviceProductSeeds{i, event.queue()};
+
 			////////////////////////////////////////////////////////////////////
 			// Fill in SOAs
 			// Technically should separate in different producers that create the SoAs
@@ -114,6 +120,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			i = 0;
 	        for (auto& superClusRef : event.get(superClustersTokens_)) 
 			{
+				viewSCs[i].id() =  i;
 				viewSCs[i].scSeedTheta() =  superClusRef->seed()->position().theta();
 				viewSCs[i].scPhi() = superClusRef->position().phi();
 				viewSCs[i].scR() = superClusRef->position().r();
@@ -127,7 +134,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			for (auto& initialSeedRef : event.get(initialSeedsToken_)) 
 			{	
 				viewSeeds[i].nHits() = initialSeedRef.nHits();
-				
+				viewSeeds[i].isMatched() = 0;		
+				viewSeeds[i].matchedScID() = -1;
+
 				auto const& recHit = *(initialSeedRef.recHits().begin() + 0);  
 				viewSeeds[i].detectorID().x() = recHit.geographicalId().subdetId() == PixelSubdetector::PixelBarrel ? 1: 0;
 				viewSeeds[i].isValid().x() = recHit.isValid();
@@ -193,8 +202,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			//algo_.printSCs(event.queue(), deviceProductSCs);
 
 			// Matching algorithm
-			//algo_.matchSeeds(event.queue(), deviceProductSeeds, deviceProductSCs,vertex(0),vertex(1), vertex(2));
-      		//alpaka::wait(event.queue());			
+			algo_.matchSeeds(event.queue(), deviceProductSeeds, deviceProductSCs,vertex(0),vertex(1), vertex(2));
+
+			// Shouldnt I get some sort of print out from the GPU?
+      		alpaka::wait(event.queue()); 
 
 
 			// For testing developments wrt legacy implementations
@@ -306,8 +317,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 						}
 					}
 
-					std::cout<<"Number of seeds: "<<seeds<<" Propagation notValid_old "<< notValid_old << "  notValid_new " <<notValid_new<<std::endl;
 					if(false){
+						std::cout<<"Number of seeds: "<<seeds<<" Propagation notValid_old "<< notValid_old << "  notValid_new " <<notValid_new<<std::endl;
 						printf("Print out legacy fts position %f and new fts position  and %lf \n",freeTS.position().x(), testposition(0));
 						printf("For SC i=%d Energy is :%f , theta is :%f,  r is : %f \n",i,superClusRef->energy(),superClusRef->seed()->position().theta(),superClusRef->position().r()) ;
 						printf(" view %lf ", viewSCs[i].scR());
@@ -343,3 +354,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/MakerMacros.h"
 DEFINE_FWK_ALPAKA_MODULE(ElectronNHitSeedAlpakaProducer);
+
