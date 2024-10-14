@@ -1,3 +1,5 @@
+#include <Eigen/Core>
+
 #include "DataFormats/Common/interface/DeviceProduct.h"
 #include "DataFormats/Common/interface/Wrapper.h"
 

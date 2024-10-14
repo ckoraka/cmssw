@@ -118,7 +118,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			// Info on SoAs : https://github.com/cms-sw/cmssw/blob/master/DataFormats/SoATemplate/README.md
 
 			i = 0;
-	        for (auto& superClusRef : event.get(superClustersTokens_)) 
+	        for (auto& superClusRef : event.get(superClustersTokens_))
 			{
 				viewSCs[i].id() =  i;
 				viewSCs[i].scSeedTheta() =  superClusRef->seed()->position().theta();
@@ -327,7 +327,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				}
 			}
 
-			event.emplace(deviceToken_, std::move(deviceProductSCs));
+			event.emplace(deviceToken_, std::move(deviceProductSeeds));
 		}
 
 		static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -340,7 +340,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		}
 
 	private:
-		const device::EDPutToken<reco::SuperclusterDeviceCollection> deviceToken_;
+		const device::EDPutToken<reco::EleSeedDeviceCollection> deviceToken_;
 		const int32_t size_;
 		const edm::EDGetTokenT<TrajectorySeedCollection> initialSeedsToken_;
 		const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;

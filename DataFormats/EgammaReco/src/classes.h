@@ -1,3 +1,4 @@
+#include <Eigen/Core>
 #include "DataFormats/EgammaReco/interface/SuperClusterSoA.h"
 #include "DataFormats/EgammaReco/interface/SuperclusterHostCollection.h"
 #include "DataFormats/EgammaReco/interface/EleSeedSoA.h"
