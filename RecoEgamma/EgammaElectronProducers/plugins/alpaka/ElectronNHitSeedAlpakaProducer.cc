@@ -84,26 +84,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 			// Get MagField ESProduct for comparing & Geom ESProduct 
 			auto const& magField = iSetup.getData(magFieldToken_);
-			const TrackerGeometry* theG = &iSetup.getData(geomToken);
+			//const TrackerGeometry* theG = &iSetup.getData(geomToken);
 
 
 			PropagatorWithMaterial backwardPropagator_ = PropagatorWithMaterial(oppositeToMomentum, 0.000511, &magField);
 
+			reco::SuperclusterHostCollection hostProductSCs{int(event.get(superClustersTokens_).size()), event.queue()};
+			reco::SuperclusterDeviceCollection deviceProductSCs{int(event.get(superClustersTokens_).size()), event.queue()};
 
-			int i=0;
-	        for (auto& superClusRef : event.get(superClustersTokens_)) {
-				++i;
-			}
-
-			reco::SuperclusterHostCollection hostProductSCs{i, event.queue()};
-			reco::SuperclusterDeviceCollection deviceProductSCs{i, event.queue()};
-
-			i = 0; // To fix : Should be a smarter way to get the size of these 
-			for (auto& initialSeedRef : event.get(initialSeedsToken_)) 
-				++i;
-
-			reco::EleSeedHostCollection hostProductSeeds{i, event.queue()};
-			reco::EleSeedDeviceCollection deviceProductSeeds{i, event.queue()};
+			reco::EleSeedHostCollection hostProductSeeds{int(event.get(initialSeedsToken_).size()), event.queue()};
+			reco::EleSeedDeviceCollection deviceProductSeeds{int(event.get(initialSeedsToken_).size()), event.queue()};
 
 			auto& viewSCs = hostProductSCs.view();
 			auto& viewSeeds = hostProductSeeds.view();
@@ -123,8 +113,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			std::map<int, reco::SuperClusterRef> superClusterRefMap_;
 			std::map<int, TrajectorySeed> seedRefMap_;
 
-			i = 0;
-	        for (auto& superClusRef : event.get(superClustersTokens_))
+			int i = 0;
+	        	for (auto& superClusRef : event.get(superClustersTokens_))
 			{
 				viewSCs[i].id() =  i;
 				viewSCs[i].scSeedTheta() =  superClusRef->seed()->position().theta();
@@ -150,7 +140,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			for (auto& initialSeedRef : event.get(initialSeedsToken_)) 
 			{	
 				// Filling in a map with the whole object
-    			seedRefMap_[i] = initialSeedRef;  
+    				seedRefMap_[i] = initialSeedRef;  
 
 				// Fill in the view
 				viewSeeds[i].nHits() = initialSeedRef.nHits();

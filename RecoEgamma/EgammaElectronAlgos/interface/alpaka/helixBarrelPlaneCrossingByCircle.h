@@ -100,7 +100,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 		const PlanePortable::Plane<Vector3f> plane{surfPosition,surfRotation};
 
-		const double straightLineCutoff = 1.e+7;
+		const double straightLineCutoff = 1.e-7;
 		if (fabs(rho) < straightLineCutoff  &&  fabs(rho) * startingPos.head(2).norm() < straightLineCutoff) {
 			// calculate path length
 			const auto pz = plane.distanceFromPlaneVector(startingDir);
