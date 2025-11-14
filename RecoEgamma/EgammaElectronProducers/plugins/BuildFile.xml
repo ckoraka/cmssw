@@ -33,3 +33,14 @@
 <library file="*.cc" name="RecoEgammaEgammaElectronProducersPlugins">
   <flags EDM_PLUGIN="1"/>
 </library>
+
+<library file="alpaka/*.cc" name="RecoEgammaEgammaElectronProducersPluginsPortable">
+<use name="alpaka"/>
+<use name="DataFormats/PortableTestObjects"/>
+<use name="DataFormats/TestObjects"/>
+<use name="HeterogeneousCore/AlpakaCore"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
+<use name="HeterogeneousCore/AlpakaTest"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
