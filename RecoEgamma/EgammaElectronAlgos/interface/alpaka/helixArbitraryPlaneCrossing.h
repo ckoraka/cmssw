@@ -10,7 +10,6 @@
 #include <utility>
 #include <iostream>
 #include <atomic>
-#include <vdt/vdtMath.h> 
 
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixArbitraryPlaneCrossing2Order.h"
 

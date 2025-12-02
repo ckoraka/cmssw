@@ -196,13 +196,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			 			} 
 						else if ((alpaka::math::abs(acc, u[0]) < small) && (alpaka::math::abs(acc, u[1]) < small)) 
 			 			{
-			 				//Propagators::helixForwardPlaneCrossing(position,momentum,rho,Propagators::oppositeToMomentum,plane,s,propagatedPos,propagatedMom,theSolExists);
-			 				Propagators::helixBarrelPlaneCrossing<TAcc, Propagators::PropagationDirection::oppositeToMomentum>(acc,position,momentum,rho,surfPosition,surfRotation,theSolExists,propagatedPos,propagatedMom,s);
-
+			 				Propagators::helixForwardPlaneCrossing<TAcc, Propagators::PropagationDirection::oppositeToMomentum>(acc,position,momentum,rho,plane,s,propagatedPos,propagatedMom,theSolExists);
 			 			} 
 			 			else {
-			 				Propagators::helixBarrelPlaneCrossing<TAcc, Propagators::PropagationDirection::oppositeToMomentum>(acc,position,momentum,rho,surfPosition,surfRotation,theSolExists,propagatedPos,propagatedMom,s);
-			 				// Propagators::helixArbitraryPlaneCrossing(position,momentum,rho,Propagators::oppositeToMomentum,plane,s,propagatedPos,propagatedMom,theSolExists);
+			 				Propagators::helixArbitraryPlaneCrossing<TAcc, Propagators::PropagationDirection::oppositeToMomentum>(acc,position,momentum,rho,plane,s,propagatedPos,propagatedMom,theSolExists);
 			 			}
 	
 						if(!theSolExists) continue;
@@ -247,19 +244,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			 			}
 			 			else if ((alpaka::math::abs(acc, u[0]) < small) && (alpaka::math::abs(acc,u[1]) < small)) 
 			 			{
-			 				Propagators::helixBarrelPlaneCrossing<TAcc, Propagators::PropagationDirection::alongMomentum>(acc,position2,momentum2,rho,surf2Position,surf2Rotation,theSolExists,propagatedPos,propagatedMom,s);
-							// Propagators::helixForwardPlaneCrossing(position2,momentum2,rho,Propagators::alongMomentum,plane2,s,propagatedPos,propagatedMom,theSolExists);
+			 				Propagators::helixForwardPlaneCrossing<TAcc, Propagators::PropagationDirection::alongMomentum>(acc,position2,momentum2,rho,plane2,s,propagatedPos,propagatedMom,theSolExists);
 			 			} 
 			 			else {
-			 				Propagators::helixBarrelPlaneCrossing<TAcc, Propagators::PropagationDirection::alongMomentum>(acc, position2,momentum2,rho,surf2Position,surf2Rotation,theSolExists,propagatedPos,propagatedMom,s);
-			 				// Propagators::helixArbitraryPlaneCrossing(position2,momentum2,rho,Propagators::alongMomentum,plane2,s,propagatedPos,propagatedMom,theSolExists);
+			 				Propagators::helixArbitraryPlaneCrossing<TAcc, Propagators::PropagationDirection::alongMomentum>(acc,position2,momentum2,rho,plane2,s,propagatedPos,propagatedMom,theSolExists);
 			 			}								
 
+						// FIX: Double check if this is a bug --> do I scale original momentum? 
 						const double scale2 = momentum.norm(acc) / propagatedMom.norm(acc);
 						propagatedMom *= scale2;
-
-						//propagatedMom.normalize(); 
-						//propagatedMom*= momentum.norm();
 
 						if(!theSolExists)
 							continue;

@@ -33,7 +33,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 				template <typename TAcc>
 				ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE T pos_norm(TAcc const& acc) const {
-					return position.norm();
+					return position.norm(acc);
 				}
 
 				// Returns the normal vector of the plane

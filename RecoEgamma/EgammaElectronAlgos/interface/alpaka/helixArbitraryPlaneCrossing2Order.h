@@ -82,7 +82,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 						s1 = s2;
 						s2 = tmp;
 					}
-					if ((s1 < 0) & (s2 >= 0)) {
+					if ((s1 < 0) && (s2 >= 0)) {
 						valid = true;
 						path = propSign * s2;
 					} else if (s1 >= 0) {
@@ -173,7 +173,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			}
 
 			// Choose solution based on direction
-			validPath = PlaneCrossing2Order::solutionByDirection<propDir>(acc, pathLength, dS1, dS2);
+			validPath = PlaneCrossing2Order::solutionByDirection<TAcc, propDir>(acc, pathLength, dS1, dS2);
 
 			if (validPath) {
 				// Calculate position and direction

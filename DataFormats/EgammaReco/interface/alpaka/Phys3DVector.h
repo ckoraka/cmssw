@@ -89,7 +89,7 @@ namespace cms::alpakatools::math {
     }
 
     template <typename TAcc >
-    ALPAKA_FN_ACC void normalize( const TAcc &acc) const {
+    ALPAKA_FN_ACC void normalize( const TAcc &acc) {
 
       const T nrm = norm(acc);
 
