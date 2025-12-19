@@ -1,5 +1,5 @@
-#ifndef DataFormats_EgammaReco_interface_SuperclusterHostCollection_h
-#define DataFormats_EgammaReco_interface_SuperclusterHostCollection_h
+#ifndef DataFormats_EgammaReco_interface_SuperClusterHostCollection_h
+#define DataFormats_EgammaReco_interface_SuperClusterHostCollection_h
 
 #include "DataFormats/Portable/interface/PortableHostCollection.h"
 #include "DataFormats/EgammaReco/interface/SuperClusterSoA.h"
@@ -11,4 +11,4 @@ namespace reco {
 
 }  // namespace reco
 
-#endif  // DataFormats_PortableTestObjects_interface_TestHostCollection_h
+#endif  // DataFormats_EgammaReco_interface_SuperClusterHostCollection_h
