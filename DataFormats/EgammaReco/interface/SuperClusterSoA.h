@@ -1,5 +1,5 @@
-#ifndef EgammaReco_SuperClusterSoA_h
-#define EgammaReco_SuperClusterSoA_h
+#ifndef DataFormats_EgammaReco_interface_SuperClusterSoA_h
+#define DataFormats_EgammaReco_interface_SuperClusterSoA_h
 
 #include <cstdint>
 #include "DataFormats/SoATemplate/interface/SoACommon.h"

@@ -45,7 +45,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				theCachedCDPhi = alpaka::math::cos(acc, theCachedDPhi);
 			}
 
-            if (std::abs(theCachedDPhi) > 1.e-4) {
+            if (alpaka::math::abs(acc, theCachedDPhi) > 1.e-4) {
 				// "standard" helix formula
 				const double o = 1. / rho;
 				res[0] = point[0] + (-sinPhi0 * (1.0 - theCachedCDPhi) + cosPhi0 * theCachedSDPhi) * o;

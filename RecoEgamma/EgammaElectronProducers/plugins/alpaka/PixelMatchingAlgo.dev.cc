@@ -1,8 +1,3 @@
-// Check that ALPAKA_HOST_ONLY is not defined during device compilation:
-#ifdef ALPAKA_HOST_ONLY
-#error ALPAKA_HOST_ONLY defined in device compilation
-#endif
-
 #include <alpaka/alpaka.hpp>
 
 #include "DataFormats/EgammaReco/interface/alpaka/EleSeedDeviceCollection.h"
@@ -53,7 +48,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 	public:
 	template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
 	ALPAKA_FN_ACC void operator()(TAcc const& acc,
-									reco::SuperclusterDeviceCollection::View view,
+									reco::SuperclusterDeviceCollection::ConstView view,
 									int32_t size) const 
 		{
 #if 0
@@ -84,15 +79,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 	public:
 	template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
 	ALPAKA_FN_ACC void operator()(TAcc const& acc,
-									reco::EleSeedDeviceCollection::View view,
+									reco::EleSeedDeviceCollection::ConstView view,
 									int32_t size) const 
 		{
 
 			for (int32_t i : uniform_elements(acc, size)) 
 			{
 
-				if(i>=size)
-    				break;
 
 				auto seed = view[i];
 
@@ -136,11 +129,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 			const Vec3d vertex(vtx_x,vtx_y,vtx_z); 
 
-			for (int i : uniform_elements(acc,sizeEleSeeds)) 
+			for (int i : uniform_elements(acc, viewEleSeeds.metadata.size())) 
 			{
-				if(i>=sizeEleSeeds)
-					break;
-
 				auto eleSeed = viewEleSeeds[i];
 
 				if(!(eleSeed.hit0isValid()))
@@ -158,7 +148,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 				for(int j = 0; j < sizeSCs; ++j)
 				{
 
-					if(j >= sizeSCs) break;
 
 			 		const double x = viewSCs[j].scR() * alpaka::math::sin(acc,viewSCs[j].scSeedTheta()) * alpaka::math::cos(acc,viewSCs[j].scPhi());				
 					const double y = viewSCs[j].scR() * alpaka::math::sin(acc,viewSCs[j].scSeedTheta()) * alpaka::math::sin(acc,viewSCs[j].scPhi());

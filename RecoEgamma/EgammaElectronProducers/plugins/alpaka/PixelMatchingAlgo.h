@@ -2,18 +2,16 @@
 #define RecoEgamma_EgammaElectronProducers_plugins_alpaka_PixelMatchingAlgo_h
 
 
-#include "DataFormats/PortableTestObjects/interface/alpaka/TestDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/alpaka/EleSeedDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/alpaka/SuperclusterDeviceCollection.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include <DataFormats/EgammaReco/interface/alpaka/Phys3DVector.h>
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   class PixelMatchingAlgo {
   public:
-    void printEleSeeds(Queue& queue, reco::EleSeedDeviceCollection& collection) const;
-    void printSCs(Queue& queue, reco::SuperclusterDeviceCollection& collection) const;
+    void printEleSeeds(Queue& queue, const reco::EleSeedDeviceCollection& collection) const;
+    void printSCs(Queue& queue, const reco::SuperclusterDeviceCollection& collection) const;
     void matchSeeds(Queue& queue, reco::EleSeedDeviceCollection& collection, reco::SuperclusterDeviceCollection& collectionSCs, double vtx_X, double vtx_Y, double vtx_Z) const;
 
   };

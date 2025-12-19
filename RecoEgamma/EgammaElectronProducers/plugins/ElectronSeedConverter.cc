@@ -1,10 +1,8 @@
-#include <iostream>
 #include <string>
 
 #include "FWCore/Framework/interface/global/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
-#include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
@@ -30,8 +28,8 @@ public:
 private:
     const edm::EDGetTokenT<TrajectorySeedCollection> initialSeedsToken_;
     const edm::EDGetTokenT<reco::EleSeedHostCollection> matchedEleSeedSoAToken_; 
+	const edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
     const edm::EDPutTokenT<reco::ElectronSeedCollection> putToken_;
-	edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
 };
 
 
@@ -45,10 +43,9 @@ void ElectronSeedConverter::fillDescriptions(edm::ConfigurationDescriptions& des
 
 ElectronSeedConverter::ElectronSeedConverter(const edm::ParameterSet& pset)
     :initialSeedsToken_(consumes(pset.getParameter<edm::InputTag>("initialSeeds"))),
-    matchedEleSeedSoAToken_(consumes<reco::EleSeedHostCollection>(pset.getParameter<edm::InputTag>("eleSeedsSoA"))),    
-    putToken_{produces<reco::ElectronSeedCollection>()} {
-	    superClustersTokens_ = consumes(pset.getParameter<edm::InputTag>("superClusters"));
-    }
+    matchedEleSeedSoAToken_(consumes(pset.getParameter<edm::InputTag>("eleSeedsSoA"))),    
+    superClustersTokens_(consumes(pset.getParameter<edm::InputTag>("superClusters"))),
+    putToken_(produces()) {}
 
 void ElectronSeedConverter::produce(edm::StreamID, edm::Event& event, const edm::EventSetup& iSetup) const {
 
@@ -58,32 +55,19 @@ void ElectronSeedConverter::produce(edm::StreamID, edm::Event& event, const edm:
     // auto eleSeeds = std::make_unique<reco::ElectronSeedCollection>();
     // eleSeeds->reserve(eleSeedSoAView.metadata().size());
 
-    std::map<int, reco::SuperClusterRef> superClusterRefMap_;
-    std::map<int, TrajectorySeed> seedRefMap_;
-
-    int i=0;
-	for (auto& superClusRef : event.get(superClustersTokens_)) {
-		superClusterRefMap_[i] = superClusRef;
-		++i;
-    }
-
-    i=0;
-    for (auto& initialSeedRef : event.get(initialSeedsToken_)) {
-        seedRefMap_[i] = initialSeedRef;  
-        ++i;
-    }
+    auto const& superClusterRefMap = event.get(superClustersTokens_);
+    auto const& seedRefMap = event.get(initialSeedsToken_);
 
     for (int i = 0; i < view.metadata().size(); ++i) {
         if (view[i].isMatched() > 0) {
             int matchedScID = view[i].matchedScID();
-            auto scIter = superClusterRefMap_.find(matchedScID);
             std::cout << "  matchedScID: " << view[i].matchedScID() << std::endl;
-
-            if (scIter != superClusterRefMap_.end()) {
-                const reco::SuperClusterRef& superClusRef = scIter->second;
-                auto seedIter = seedRefMap_.find(view[i].id());
-                if (seedIter != seedRefMap_.end()) {
-                    const TrajectorySeed& matchedSeed = seedIter->second;
+            auto scIter = superClusterRefMap.find(matchedScID);
+            if (matchedScID < superClusterRefMap.size()) {
+              const reco::SuperClusterRef& superClusRef = superClusterRefMap_[matchedScID];
+                auto seedIter = seedRefMap.find();
+                if (view[i].id() < seedRefMap.size) {
+                    const TrajectorySeed& matchedSeed = seedRefMap_[view[i].id()];
                     reco::ElectronSeed eleSeed(matchedSeed);
                     reco::ElectronSeed::CaloClusterRef caloClusRef(superClusRef);
                     eleSeed.setCaloCluster(caloClusRef);
@@ -95,8 +79,6 @@ void ElectronSeedConverter::produce(edm::StreamID, edm::Event& event, const edm:
         }
     }
     std::cout << "New eleSeeds size " << eleSeeds.size() << std::endl;
-    superClusterRefMap_.clear();
-    seedRefMap_.clear();  
 
     event.emplace(putToken_, std::move(eleSeeds));
 }

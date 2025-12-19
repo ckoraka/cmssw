@@ -9,7 +9,7 @@
 #include <cmath>
 #include <cfloat>
 
-#include <DataFormats/EgammaReco/interface/alpaka/Phys3DVector.h>
+#include "DataFormats/EgammaReco/interface/alpaka/Phys3DVector.h"
 
 using Vec3d = cms::alpakatools::math::Phys3DVector<double>;
 

@@ -2,7 +2,7 @@
 #define DataFormats_EgammaReco_interface_alpaka_EleRelPointPairPortable_h
 
 #include <cmath>
-#include <DataFormats/EgammaReco/interface/alpaka/Phys3DVector.h>
+#include "DataFormats/EgammaReco/interface/alpaka/Phys3DVector.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 

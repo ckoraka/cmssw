@@ -1,9 +1,6 @@
 #ifndef DataFormats_EgammaReco_interface_alpaka_Phys3DVector_h
 #define DataFormats_EgammaReco_interface_alpaka_Phys3DVector_h
 
-//
-// Author: Felice Pantaleo, CERN
-//
 
 #include <utility>
 

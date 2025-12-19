@@ -6,7 +6,6 @@
 #ifndef RecoEgamma_EgammaElectronAlgos_interface_alpaka_helixPropagator_h
 #define RecoEgamma_EgammaElectronAlgos_interface_alpaka_helixPropagator_h
 
-#include <iostream>
 #include <cmath>
 #include <Eigen/Dense>
 
@@ -20,7 +19,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 	namespace Propagators {
 
 		template <typename T>
-		ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE T sqr(const T& t) {
+		ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE T sqr(const T t) {
 			return t * t;
 		};
 

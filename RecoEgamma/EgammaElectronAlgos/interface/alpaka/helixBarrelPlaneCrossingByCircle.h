@@ -5,12 +5,11 @@
 #ifndef RecoEgamma_EgammaElectronAlgos_interface_alpaka_helixBarrelPlaneCrossing_h
 #define RecoEgamma_EgammaElectronAlgos_interface_alpaka_helixBarrelPlaneCrossing_h
 
-#include <iostream>
 #include <cmath>
 
 #include "DataFormats/EgammaReco/interface/alpaka/Plane.h"
 
-#include <DataFormats/EgammaReco/interface/alpaka/Phys3DVector.h>
+#include "DataFormats/EgammaReco/interface/alpaka/Phys3DVector.h"
 
 using Vec3d = cms::alpakatools::math::Phys3DVector<double>;
 

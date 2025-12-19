@@ -1,6 +1,5 @@
 #include <Eigen/Core>
 
-#include "DataFormats/PortableTestObjects/interface/alpaka/TestDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EgammaReco/interface/EleSeedSoA.h"
@@ -11,35 +10,22 @@
 #include "DataFormats/EgammaReco/interface/EleSeedHostCollection.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
-#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "DataFormats/EgammaReco/interface/ElectronSeed.h"
 #include "DataFormats/EgammaReco/interface/ElectronSeedFwd.h"
 
-#include "MagneticField/Engine/interface/MagneticField.h"
-#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
-#include "MagneticField/ParametrizedEngine/interface/ParabolicParametrizedMagneticField.h"
-#include "Geometry/Records/interface/TrackerTopologyRcd.h"
-#include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
-#include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/stream/EDProducer.h"
-#include "FWCore/Framework/interface/ESProducer.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/Utilities/interface/EDGetToken.h"
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "FWCore/Utilities/interface/StreamID.h"
-#include "FWCore/Framework/interface/ConsumesCollector.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "HeterogeneousCore/AlpakaServices/interface/alpaka/AlpakaService.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/global/EDProducer.h"
-#include "HeterogeneousCore/AlpakaCore/interface/alpaka/stream/SynchronizingEDProducer.h"
 
 // Additional includes for testing / comparing implementations
 #include "PixelMatchingAlgo.h"
@@ -56,37 +42,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			size_{pset.getParameter<int32_t>("size")},
 			initialSeedsToken_(consumes(pset.getParameter<edm::InputTag>("initialSeeds"))),
 			beamSpotToken_(consumes(pset.getParameter<edm::InputTag>("beamSpot"))),
+			superClustersTokens_(consumes(pset.getParameter<edm::InputTag>("superClusters"))),
 			magFieldToken_(esConsumes()),
-			geomToken(esConsumes())
-			{
-				superClustersTokens_ = consumes(pset.getParameter<edm::InputTag>("superClusters"));
-			}
+			geomToken(esConsumes()) {}
 
       	void produce(edm::StreamID sid, device::Event& event, device::EventSetup const& iSetup) const override {
-		//void produce(device::Event& event, device::EventSetup const& iSetup) const override {
 
 			auto vprim_ = event.get(beamSpotToken_).position();
 			GlobalPoint vprim(vprim_.x(), vprim_.y(), vprim_.z());
 			Vector3d vertex{vprim.x(),vprim.y(),vprim.z()};
 
-			// NEW EVENT
-			std::cout<<" -----> NEW EVENT <------- "<<std::endl;
-			// Get MagField ESProduct for comparing & Geom ESProduct
-			// auto const& magField = iSetup.getData(magFieldToken_);
-			// const TrackerGeometry* theG = &iSetup.getData(geomToken);
-			// PropagatorWithMaterial backwardPropagator_ = PropagatorWithMaterial(oppositeToMomentum, 0.000511, &magField);
 
-			std::vector<reco::SuperClusterRef> superClusterRefVec;
-
-			for (auto& superClusRef : event.get(superClustersTokens_))
-				superClusterRefVec.push_back(superClusRef);
+			const std::vector<reco::SuperClusterRef>& superClusterRefVec = event.get(superClustersTokens_);
 
 			int32_t superClusterCollectionSize = superClusterRefVec.size();
 			reco::SuperclusterHostCollection hostProductSCs{superClusterCollectionSize, event.queue()};
 
-			std::vector<TrajectorySeed> seedRefVec;
-			for (auto& initialSeedRef : event.get(initialSeedsToken_))
-				seedRefVec.push_back(initialSeedRef);
+			const std::vector<TrajectorySeed>& seedRefVec = event.get(initialSeedsToken_;
 
 			int32_t seedCollectionSize = seedRefVec.size();
 			reco::EleSeedHostCollection hostProductSeeds{seedCollectionSize, event.queue()};
@@ -106,7 +78,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			for (auto& superClusRef : superClusterRefVec)
 			{
 				viewSCs[i].id() =  i;
-				viewSCs[i].scSeedTheta() =  superClusRef->seed()->position().theta();
+				const auto& superClus = *superClusRef;
+				viewSCs[i].scSeedTheta() =  superClus.seed()->position().theta();
 				viewSCs[i].scPhi() = superClusRef->position().phi();
 				viewSCs[i].scR() = superClusRef->position().r();
 				viewSCs[i].scEnergy() = superClusRef->energy();
@@ -215,9 +188,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		const int32_t size_;
 		const edm::EDGetTokenT<TrajectorySeedCollection> initialSeedsToken_;
 		const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
-		edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magFieldToken_;
+		const edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
+		const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magFieldToken_;
 		const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken;
-		edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
 		PixelMatchingAlgo const algo_{};
   };
 
