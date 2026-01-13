@@ -18,4 +18,3 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #endif  // DataFormats_EgammaReco_interface_alpaka_SuperClusterDeviceCollection_h
-
