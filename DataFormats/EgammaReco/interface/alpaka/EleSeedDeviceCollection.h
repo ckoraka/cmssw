@@ -12,7 +12,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   namespace reco {
     using namespace ::reco;
     using EleSeedDeviceCollection = PortableCollection<EleSeedSoA>;
-  }  // namespace portabletest
+  }  // namespace reco
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
-#endif  // DataFormats_PortableTestObjects_interface_alpaka_TestDeviceCollection_h
+#endif  // DataFormats_EgammaReco_interface_alpaka_EleSeedDeviceCollection_h

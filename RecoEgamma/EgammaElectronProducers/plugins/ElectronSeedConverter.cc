@@ -8,6 +8,7 @@
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/Utilities/interface/EDGetToken.h"
 #include "FWCore/Utilities/interface/EDPutToken.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 #include "DataFormats/EgammaReco/interface/EleSeedHostCollection.h"
@@ -52,34 +53,34 @@ void ElectronSeedConverter::produce(edm::StreamID, edm::Event& event, const edm:
     auto const& view = event.get(matchedEleSeedSoAToken_).const_view();
 
     reco::ElectronSeedCollection eleSeeds{};
-    // auto eleSeeds = std::make_unique<reco::ElectronSeedCollection>();
-    // eleSeeds->reserve(eleSeedSoAView.metadata().size());
+    // eleSeeds->reserve(eleSeedSoAView.metadata().size()); // This is too big 
 
-    auto const& superClusterRefMap = event.get(superClustersTokens_);
-    auto const& seedRefMap = event.get(initialSeedsToken_);
+	auto const& superClusterRefs = event.get(superClustersTokens_);
+	auto const& initialSeeds = event.get(initialSeedsToken_);
 
-    for (int i = 0; i < view.metadata().size(); ++i) {
+    for (int i = 0; i < view.metadata().size(); ++i) 
+	{
         if (view[i].isMatched() > 0) {
             int matchedScID = view[i].matchedScID();
-            std::cout << "  matchedScID: " << view[i].matchedScID() << std::endl;
-            auto scIter = superClusterRefMap.find(matchedScID);
-            if (matchedScID < superClusterRefMap.size()) {
-              const reco::SuperClusterRef& superClusRef = superClusterRefMap_[matchedScID];
-                auto seedIter = seedRefMap.find();
-                if (view[i].id() < seedRefMap.size) {
-                    const TrajectorySeed& matchedSeed = seedRefMap_[view[i].id()];
-                    reco::ElectronSeed eleSeed(matchedSeed);
-                    reco::ElectronSeed::CaloClusterRef caloClusRef(superClusRef);
-                    eleSeed.setCaloCluster(caloClusRef);
-                    eleSeeds.emplace_back(eleSeed);
-                }
-            } else {
-                std::cerr << "No SuperCluster found for SC ID " << matchedScID << std::endl;
-            }
-        }
-    }
-    std::cout << "New eleSeeds size " << eleSeeds.size() << std::endl;
+            int seedID = view[i].id();
+            
+			std::cout << "  matchedScID: " << view[i].matchedScID() << std::endl;
+            
+			if (matchedScID >= 0 && static_cast<unsigned int>(matchedScID) < superClusterRefs.size() && seedID >= 0 && static_cast<unsigned int>(seedID) < initialSeeds.size()) 
+			{
+            	const reco::SuperClusterRef& superClusRef = superClusterRefs[matchedScID];
+				const TrajectorySeed& matchedSeed = initialSeeds[seedID];
+				reco::ElectronSeed eleSeed(matchedSeed);
+				reco::ElectronSeed::CaloClusterRef caloClusRef(superClusRef);
+				eleSeed.setCaloCluster(caloClusRef);
+				eleSeeds.emplace_back(eleSeed);
 
+            } else {
+                edm::LogWarning("ElectronSeedConverter") << "Index out of bounds for SC ID: " << matchedScID << " or Seed ID: " << seedID;
+            }
+    	}
+	}
+    std::cout << "New eleSeeds size " << eleSeeds.size() << std::endl;
     event.emplace(putToken_, std::move(eleSeeds));
 }
 

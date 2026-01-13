@@ -9,10 +9,14 @@
 #include "DataFormats/EgammaReco/interface/alpaka/EleSeedDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/EleSeedHostCollection.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
+#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 #include "DataFormats/EgammaReco/interface/ElectronSeed.h"
 #include "DataFormats/EgammaReco/interface/ElectronSeedFwd.h"
 
+#include "Geometry/Records/interface/TrackerTopologyRcd.h"
+#include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
+#include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -42,9 +46,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			size_{pset.getParameter<int32_t>("size")},
 			initialSeedsToken_(consumes(pset.getParameter<edm::InputTag>("initialSeeds"))),
 			beamSpotToken_(consumes(pset.getParameter<edm::InputTag>("beamSpot"))),
-			superClustersTokens_(consumes(pset.getParameter<edm::InputTag>("superClusters"))),
-			magFieldToken_(esConsumes()),
-			geomToken(esConsumes()) {}
+			superClustersTokens_(consumes(pset.getParameter<edm::InputTag>("superClusters"))) {}
 
       	void produce(edm::StreamID sid, device::Event& event, device::EventSetup const& iSetup) const override {
 
@@ -56,9 +58,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			const std::vector<reco::SuperClusterRef>& superClusterRefVec = event.get(superClustersTokens_);
 
 			int32_t superClusterCollectionSize = superClusterRefVec.size();
-			reco::SuperclusterHostCollection hostProductSCs{superClusterCollectionSize, event.queue()};
+			reco::SuperClusterHostCollection hostProductSCs{superClusterCollectionSize, event.queue()};
 
-			const std::vector<TrajectorySeed>& seedRefVec = event.get(initialSeedsToken_;
+			const std::vector<TrajectorySeed>& seedRefVec = event.get(initialSeedsToken_);
 
 			int32_t seedCollectionSize = seedRefVec.size();
 			reco::EleSeedHostCollection hostProductSeeds{seedCollectionSize, event.queue()};
@@ -145,7 +147,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 			}
 
 			// Create device products & copy to device
-			reco::SuperclusterDeviceCollection deviceProductSCs{superClusterCollectionSize, event.queue()};
+			reco::SuperClusterDeviceCollection deviceProductSCs{superClusterCollectionSize, event.queue()};
 			reco::EleSeedDeviceCollection deviceProductSeeds{seedCollectionSize, event.queue()};
 			alpaka::memcpy(event.queue(), deviceProductSCs.buffer(), hostProductSCs.buffer());
 			alpaka::memcpy(event.queue(), deviceProductSeeds.buffer(), hostProductSeeds.buffer());
@@ -157,11 +159,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 			// Matching algorithm
 			algo_.matchSeeds(event.queue(), deviceProductSeeds, deviceProductSCs,vertex(0),vertex(1), vertex(2));
-			//alpaka::wait(event.queue());
-			//alpaka::memcpy(event.queue(), hostProductSeeds.buffer(), deviceProductSeeds.buffer());
-			//alpaka::wait(event.queue());
 
-			// auto& view = hostProductSeeds.view();
 
 			// for (int i = 0; i < view.metadata().size(); ++i) {
 			// 	if(view[i].isMatched()>0){
@@ -189,8 +187,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		const edm::EDGetTokenT<TrajectorySeedCollection> initialSeedsToken_;
 		const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
 		const edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
-		const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magFieldToken_;
-		const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken;
 		PixelMatchingAlgo const algo_{};
   };
 

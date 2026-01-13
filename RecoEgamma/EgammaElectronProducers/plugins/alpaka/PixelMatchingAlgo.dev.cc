@@ -1,7 +1,7 @@
 #include <alpaka/alpaka.hpp>
 
 #include "DataFormats/EgammaReco/interface/alpaka/EleSeedDeviceCollection.h"
-#include "DataFormats/EgammaReco/interface/alpaka/SuperclusterDeviceCollection.h"
+#include "DataFormats/EgammaReco/interface/alpaka/SuperClusterDeviceCollection.h"
 #include "MagneticField/ParametrizedEngine/interface/ParabolicParametrizedMagneticField.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -14,7 +14,7 @@
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixForwardPlaneCrossing.h"
 
 #include "PixelMatchingAlgo.h"
-#include "DataFormats/EgammaReco/interface/alpaka/EleRelPointPairPortable.h"
+#include "DataFormats/EgammaReco/interface/EleRelPointPairPortable.h"
 #include "DataFormats/EgammaReco/interface/alpaka/Plane.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
@@ -48,7 +48,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 	public:
 	template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
 	ALPAKA_FN_ACC void operator()(TAcc const& acc,
-									reco::SuperclusterDeviceCollection::ConstView view,
+									reco::SuperClusterDeviceCollection::ConstView view,
 									int32_t size) const 
 		{
 #if 0
@@ -112,15 +112,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 		}
 	};
 
-	//--- Kernel for performing the seed to SC match
-	//--- Still dummy and just testing out some things
 	class SeedToSuperClusterMatcher {
 	public:
 		template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
 		ALPAKA_FN_ACC void operator()(TAcc const& acc,
 					      reco::EleSeedDeviceCollection::View viewEleSeeds,
 					      const int32_t sizeEleSeeds,
-					      reco::SuperclusterDeviceCollection::View viewSCs,
+					      reco::SuperClusterDeviceCollection::View viewSCs,
 					      const int32_t sizeSCs,
 					      const double vtx_x,
 					      const double vtx_y,
@@ -129,7 +127,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 			const Vec3d vertex(vtx_x,vtx_y,vtx_z); 
 
-			for (int i : uniform_elements(acc, viewEleSeeds.metadata.size())) 
+			for (int i : uniform_elements(acc, viewEleSeeds.metadata().size())) 
 			{
 				auto eleSeed = viewEleSeeds[i];
 
@@ -199,7 +197,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 						propagatedMom *= scale; 
 
 						// Construct relative point-pair struct for applying quality cuts
-						EleRelPointPairPortable::EleRelPointPair<typename Vec3d::value_type> pair(hitPosition,propagatedPos,vertex);
+						egamma::EleRelPointPair<typename Vec3d::value_type> pair(hitPosition,propagatedPos,vertex);
 
 						const float dPhiMax = getCutValue(acc, et, 0.05f, 20.f, -0.002f);
 						const float dRZMax  = getCutValue(acc, et, 9999.f, 0.f, 0.f);
@@ -246,7 +244,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 						if(!theSolExists)
 							continue;
 								
-						EleRelPointPairPortable::EleRelPointPair<typename Vec3d::value_type> pair2(hit2Position,propagatedPos,vertexUpdated);
+						egamma::EleRelPointPair<typename Vec3d::value_type> pair2(hit2Position,propagatedPos,vertexUpdated);
 
 						const float dPhiMax2 = getCutValue(acc, et, 0.003f, 0.f, 0.f);
 						const float dRZMax2  = getCutValue(acc, et, 0.05f, 30.f, -0.002f);
@@ -266,7 +264,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 
 	//---- Kernel launch for printing the SC SoA collection
-	void PixelMatchingAlgo::printEleSeeds(Queue& queue, reco::EleSeedDeviceCollection& collection) const {
+	void PixelMatchingAlgo::printEleSeeds(Queue& queue, const reco::EleSeedDeviceCollection& collection) const {
 		uint32_t items = 32;
 		uint32_t groups = divide_up_by(collection->metadata().size(), items);
 		auto workDiv = make_workdiv<Acc1D>(groups, items);
@@ -274,7 +272,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 	}
 
 	//---- Kernel launch for printing the SC SoA collection
-	void PixelMatchingAlgo::printSCs(Queue& queue, reco::SuperclusterDeviceCollection& collection) const {
+	void PixelMatchingAlgo::printSCs(Queue& queue, const reco::SuperClusterDeviceCollection& collection) const {
 		uint32_t items = 32;
 		uint32_t groups = divide_up_by(collection->metadata().size(), items);
 		auto workDiv = make_workdiv<Acc1D>(groups, items);
@@ -282,7 +280,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 	}
 
 	//---- Kernel launch for SC and seed matching
-	void PixelMatchingAlgo::matchSeeds(Queue& queue, reco::EleSeedDeviceCollection& collection, reco::SuperclusterDeviceCollection& collectionSCs, double vtx_X, double vtx_Y, double vtx_Z) const 
+	void PixelMatchingAlgo::matchSeeds(Queue& queue, reco::EleSeedDeviceCollection& collection, reco::SuperClusterDeviceCollection& collectionSCs, double vtx_X, double vtx_Y, double vtx_Z) const 
 	{
 		uint32_t items = 32;
 	    auto nSeeds = static_cast<uint32_t>(collection->metadata().size());
