@@ -10,4 +10,4 @@ namespace reco {
   using EleSeedHostCollection = PortableHostCollection<EleSeedSoA>;
 }  // namespace reco
 
-#endif  // DataFormats_PortableTestObjects_interface_TestHostCollection_h
+#endif  // DataFormats_EgammaReco_interface_EleSeedHostCollection_h

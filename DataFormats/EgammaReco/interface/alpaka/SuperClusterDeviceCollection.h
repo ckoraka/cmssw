@@ -2,7 +2,6 @@
 #define DataFormats_EgammaReco_interface_alpaka_SuperClusterDeviceCollection_h
 
 #include "DataFormats/Portable/interface/alpaka/PortableCollection.h"
-#include "DataFormats/PortableTestObjects/interface/TestSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "DataFormats/EgammaReco/interface/SuperClusterSoA.h"
 

@@ -78,12 +78,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       constexpr double straightLineCutoff = 1.e-7;
 
       const double abs_rho = alpaka::math::abs(acc, rho);
-      const double startingDir_2dnorm = startingPos.partial_norm(
-          acc);  //alpaka::math::sqrt(acc, startingPos[0]*startingPos[0]+startingPos[1]*startingPos[1]);
+      const double startingDir_2dnorm = startingPos.partial_norm(acc);  
 
       auto compute_position = [&](const double s) -> Vec3d {
-        const double norm = startingDir.norm(
-            acc);  //alpaka::math::sqrt(acc, startingDir[0] * startingDir[0] + startingDir[1] * startingDir[1] + startingDir[2] * startingDir[2]);
+        const double norm = startingDir.norm(acc);  
         const double scale = norm > 0. ? s / norm : 0.;  //that is, for "zero" vector this will be identity operation
         return cms::alpakatools::math::axpy(scale, startingDir, startingPos);
       };

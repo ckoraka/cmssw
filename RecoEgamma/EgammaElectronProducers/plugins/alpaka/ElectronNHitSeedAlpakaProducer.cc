@@ -1,3 +1,11 @@
+//******************************************************************************
+//
+// Portable and paralelized implementation of the pixel seed matching
+//
+// The module produces an ElectronSeed SoA including information if a
+// pixel seeds has been matched to a SC
+//*******************************************************************************
+
 #include <Eigen/Core>
 
 #include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
@@ -31,7 +39,6 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/global/EDProducer.h"
 
-// Additional includes for testing / comparing implementations
 #include "PixelMatchingAlgo.h"
 
 using Vector3d = Eigen::Matrix<double, 3, 1>;
@@ -43,7 +50,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ElectronNHitSeedAlpakaProducer(const edm::ParameterSet& pset)
         : EDProducer(pset),
           deviceToken_{produces()},
-          size_{pset.getParameter<int32_t>("size")},
           initialSeedsToken_(consumes(pset.getParameter<edm::InputTag>("initialSeeds"))),
           beamSpotToken_(consumes(pset.getParameter<edm::InputTag>("beamSpot"))),
           superClustersTokens_(consumes(pset.getParameter<edm::InputTag>("superClusters"))) {}
@@ -54,13 +60,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       Vector3d vertex{vprim.x(), vprim.y(), vprim.z()};
 
       const std::vector<reco::SuperClusterRef>& superClusterRefVec = event.get(superClustersTokens_);
-
       int32_t superClusterCollectionSize = superClusterRefVec.size();
       reco::SuperClusterHostCollection hostProductSCs{superClusterCollectionSize, event.queue()};
 
-      const std::vector<TrajectorySeed>& seedRefVec = event.get(initialSeedsToken_);
-
-      int32_t seedCollectionSize = seedRefVec.size();
+      const std::vector<TrajectorySeed>& seedVec = event.get(initialSeedsToken_);
+      int32_t seedCollectionSize = seedVec.size();
       reco::EleSeedHostCollection hostProductSeeds{seedCollectionSize, event.queue()};
 
       auto& viewSCs = hostProductSCs.view();
@@ -68,12 +72,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       std::cout << " -----> Collection sizes SCs: " << superClusterCollectionSize << " & Seeds " << seedCollectionSize
                 << std::endl;
-
-      ////////////////////////////////////////////////////////////////////
-      // Fill in SOAs
-      // Technically should separate in different producers that create the SoAs ?
-      // Info on SoAs : https://github.com/cms-sw/cmssw/blob/master/DataFormats/SoATemplate/README.md
-      ////////////////////////////////////////////////////////////////////
 
       int32_t i = 0;
       for (auto& superClusRef : superClusterRefVec) {
@@ -86,9 +84,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         ++i;
       }
 
-      // To figure out is there is another way to bulid this SoA
+      // Filling in SoAs that will be copied to the GPU
       i = 0;
-      for (auto& initialSeedRef : seedRefVec) {
+      for (auto& initialSeedRef : seedVec) {
         viewSeeds[i].nHits() = initialSeedRef.nHits();
         viewSeeds[i].id() = i;
         viewSeeds[i].isMatched() = 0;
@@ -148,29 +146,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       reco::EleSeedDeviceCollection deviceProductSeeds{seedCollectionSize, event.queue()};
       alpaka::memcpy(event.queue(), deviceProductSCs.buffer(), hostProductSCs.buffer());
       alpaka::memcpy(event.queue(), deviceProductSeeds.buffer(), hostProductSeeds.buffer());
-      // alpaka::wait(event.queue());
 
-      // Print the SoA
-      //algo_.printSCs(event.queue(), deviceProductSCs);
-      //algo_.printEleSeeds(event.queue(), deviceProductSeeds);
-
-      // Matching algorithm
       algo_.matchSeeds(event.queue(), deviceProductSeeds, deviceProductSCs, vertex(0), vertex(1), vertex(2));
 
-      // for (int i = 0; i < view.metadata().size(); ++i) {
-      // 	if(view[i].isMatched()>0){
-      // 		std::cout << "  Seed " << i << ":" << std::endl;
-      // 		std::cout << "  nHits: " << view[i].nHits() << std::endl;
-      // 		std::cout << "  isMatched: " << view[i].isMatched() << std::endl;
-      // 		std::cout << "  matchedScID: " << view[i].matchedScID() << std::endl;
-      // 	}
-      // }
       event.emplace(deviceToken_, std::move(deviceProductSeeds));
     }
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
       edm::ParameterSetDescription desc;
-      desc.add<int32_t>("size");
       desc.add<edm::InputTag>("initialSeeds", {"hltElePixelSeedsCombined"});
       desc.add<edm::InputTag>("beamSpot", {"hltOnlineBeamSpot"});
       desc.add<edm::InputTag>("superClusters", {"hltEgammaSuperClustersToPixelMatch"});
@@ -179,7 +162,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   private:
     const device::EDPutToken<reco::EleSeedDeviceCollection> deviceToken_;
-    const int32_t size_;
     const edm::EDGetTokenT<TrajectorySeedCollection> initialSeedsToken_;
     const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
     const edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;

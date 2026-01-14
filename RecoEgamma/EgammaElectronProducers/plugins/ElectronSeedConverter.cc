@@ -34,9 +34,9 @@ private:
 
 void ElectronSeedConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
-  desc.add<edm::InputTag>("initialSeeds", {"hltElePixelSeedsCombined"});
+  desc.add<edm::InputTag>("initialSeeds", edm::InputTag{"hltElePixelSeedsCombined"});
   desc.add<edm::InputTag>("eleSeedsSoA", edm::InputTag{"ElectronNHitSeedAlpakaProducer"});
-  desc.add<edm::InputTag>("superClusters", {"hltEgammaSuperClustersToPixelMatch"});
+  desc.add<edm::InputTag>("superClusters", edm::InputTag{"hltEgammaSuperClustersToPixelMatch"});
   descriptions.add("electronNHitSeedConverter", desc);
 }
 
@@ -50,7 +50,6 @@ void ElectronSeedConverter::produce(edm::StreamID, edm::Event& event, const edm:
   auto const& view = event.get(matchedEleSeedSoAToken_).const_view();
 
   reco::ElectronSeedCollection eleSeeds{};
-  // eleSeeds->reserve(eleSeedSoAView.metadata().size()); // This is too big
 
   auto const& superClusterRefs = event.get(superClustersTokens_);
   auto const& initialSeeds = event.get(initialSeedsToken_);

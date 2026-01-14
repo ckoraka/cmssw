@@ -8,8 +8,8 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/traits.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
+#include "RecoEgamma/EgammaElectronAlgos/interface/ftsFromVertexToPointPortable.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixBarrelPlaneCrossingByCircle.h"
-#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/ftsFromVertexToPointPortable.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixArbitraryPlaneCrossing.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixForwardPlaneCrossing.h"
 
@@ -41,37 +41,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
 
   //--- Kernel for printing the SC SoA
-  class printSCSoA {
+  class PrintSCSoA {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   reco::SuperClusterDeviceCollection::ConstView view,
                                   int32_t size) const {
-#if 0
-			//const int32_t thread = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
 			for (int32_t i : uniform_elements(acc, size)) 
 			{
-
-				if(i>=size)
-				    break;
-
 				auto sc = view[i];
-
 				printf("For SC i=%d Energy is :%f , theta is :%f , and r is %lf and phi is %lf,  \n",i,sc.scEnergy(),sc.scSeedTheta(), sc.scR(),sc.scPhi() ) ;
 				float x = sc.scR() * alpaka::math::sin(acc,sc.scSeedTheta()) * alpaka::math::cos(acc,sc.scPhi());
 				float y = sc.scR() * alpaka::math::sin(acc,sc.scSeedTheta()) * alpaka::math::sin(acc,sc.scPhi());
 				float z = sc.scR() * alpaka::math::cos(acc,sc.scSeedTheta());
 				printf("x: %lf,  y: %lf,  z %lf ",x,z,y);
-				Vector3d position{x,y,z};
+				Vec3d position{x,y,z};
 				printf("  Value of perp2 %lf \n",x*x+y*y);
 				printf("Calculate the magnetic field with the parabolic approximation at the SC position : %f\n",magneticFieldParabolicPortable::magneticFieldAtPoint(acc, position));			
 			}
-#endif
     }
   };
 
   //--- Kernel for printing the electron seeds SoA
-  class printElectronSeedSoA {
+  class PrintElectronSeedSoA {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const& acc, reco::EleSeedDeviceCollection::ConstView view, int32_t size) const {
@@ -292,7 +284,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     uint32_t items = 32;
     uint32_t groups = divide_up_by(collection->metadata().size(), items);
     auto workDiv = make_workdiv<Acc1D>(groups, items);
-    alpaka::exec<Acc1D>(queue, workDiv, printElectronSeedSoA{}, collection.view(), collection->metadata().size());
+    alpaka::exec<Acc1D>(queue, workDiv, PrintElectronSeedSoA{}, collection.view(), collection->metadata().size());
   }
 
   //---- Kernel launch for printing the SC SoA collection
@@ -300,7 +292,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     uint32_t items = 32;
     uint32_t groups = divide_up_by(collection->metadata().size(), items);
     auto workDiv = make_workdiv<Acc1D>(groups, items);
-    alpaka::exec<Acc1D>(queue, workDiv, printSCSoA{}, collection.view(), collection->metadata().size());
+    alpaka::exec<Acc1D>(queue, workDiv, PrintSCSoA{}, collection.view(), collection->metadata().size());
   }
 
   //---- Kernel launch for SC and seed matching
