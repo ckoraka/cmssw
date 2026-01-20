@@ -1,5 +1,5 @@
-#ifndef DataFormats_EgammaReco_interface_EleSeedSoA_h
-#define DataFormats_EgammaReco_interface_EleSeedSoA_h
+#ifndef DataFormats_EgammaReco_interface_ElectronSeedSoA_h
+#define DataFormats_EgammaReco_interface_ElectronSeedSoA_h
 
 #include <Eigen/Core>
 #include <cstdint>
@@ -10,7 +10,7 @@ namespace reco {
 
   using Vector3d = Eigen::Matrix<double, 3, 1>;
 
-  GENERATE_SOA_LAYOUT(EleSeedLayout,
+  GENERATE_SOA_LAYOUT(ElectronSeedLayout,
                       SOA_COLUMN(int8_t, nHits),
                       SOA_COLUMN(int8_t, isMatched),
                       SOA_COLUMN(int16_t, matchedScID),
@@ -30,7 +30,7 @@ namespace reco {
                       SOA_EIGEN_COLUMN(Vector3d, hit2Pos),
                       SOA_EIGEN_COLUMN(Vector3d, surf2Pos),
                       SOA_EIGEN_COLUMN(Vector3d, surf2Rot))
-  using EleSeedSoA = EleSeedLayout<>;
+  using ElectronSeedSoA = ElectronSeedLayout<>;
 }  // namespace reco
 
 #endif

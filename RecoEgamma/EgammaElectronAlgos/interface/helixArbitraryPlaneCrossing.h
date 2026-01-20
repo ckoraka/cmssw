@@ -20,18 +20,18 @@ namespace propagators {
 
   template <typename TAcc>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE Vec3d positionInDouble(TAcc const& acc,
-                                                              const double s,
-                                                              const Vec3d& point,
-                                                              const double rho,
-                                                              const double cosPhi0,
-                                                              const double sinPhi0,
-                                                              const double cosTheta,
-                                                              const double sinTheta,
-                                                              const double sinThetaI,
-                                                              double& theCachedS,
-                                                              double& theCachedDPhi,
-                                                              double& theCachedSDPhi,
-                                                              double& theCachedCDPhi) {
+                                                             const double s,
+                                                             const Vec3d& point,
+                                                             const double rho,
+                                                             const double cosPhi0,
+                                                             const double sinPhi0,
+                                                             const double cosTheta,
+                                                             const double sinTheta,
+                                                             const double sinThetaI,
+                                                             double& theCachedS,
+                                                             double& theCachedDPhi,
+                                                             double& theCachedSDPhi,
+                                                             double& theCachedCDPhi) {
     Vec3d res;
 
     if (s != theCachedS) {
@@ -212,18 +212,18 @@ namespace propagators {
       }
 
       Vec3d pnew = directionInDouble(acc,
-                                      pathLength,
-                                      point,
-                                      curvature,
-                                      cosPhi0,
-                                      sinPhi0,
-                                      cosTheta,
-                                      sinTheta,
-                                      sinThetaI,
-                                      theCachedS,
-                                      theCachedDPhi,
-                                      theCachedSDPhi,
-                                      theCachedCDPhi);
+                                     pathLength,
+                                     point,
+                                     curvature,
+                                     cosPhi0,
+                                     sinPhi0,
+                                     cosTheta,
+                                     sinTheta,
+                                     sinThetaI,
+                                     theCachedS,
+                                     theCachedDPhi,
+                                     theCachedSDPhi,
+                                     theCachedCDPhi);
 
       double tmpPathLength = 0.;
       bool tmpValidPath = false;
@@ -286,4 +286,4 @@ namespace propagators {
 
 }  // namespace propagators
 
-#endif // RecoEgamma_EgammaElectronAlgos_interface_helixArbitraryPlaneCrossing_h
+#endif  // RecoEgamma_EgammaElectronAlgos_interface_helixArbitraryPlaneCrossing_h

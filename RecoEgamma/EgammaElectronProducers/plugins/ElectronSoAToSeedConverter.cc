@@ -11,7 +11,7 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
-#include "DataFormats/EgammaReco/interface/EleSeedHostCollection.h"
+#include "DataFormats/EgammaReco/interface/ElectronSeedHostCollection.h"
 #include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EgammaReco/interface/ElectronSeed.h"
@@ -27,7 +27,7 @@ public:
 
 private:
   const edm::EDGetTokenT<TrajectorySeedCollection> initialSeedsToken_;
-  const edm::EDGetTokenT<reco::EleSeedHostCollection> matchedEleSeedSoAToken_;
+  const edm::EDGetTokenT<reco::ElectronSeedHostCollection> matchedEleSeedSoAToken_;
   const edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
   const edm::EDPutTokenT<reco::ElectronSeedCollection> putToken_;
 };

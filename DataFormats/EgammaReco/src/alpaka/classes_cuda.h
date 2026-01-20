@@ -5,5 +5,5 @@
 #include "DataFormats/EgammaReco/interface/SuperClusterSoA.h"
 #include "DataFormats/EgammaReco/interface/alpaka/SuperClusterDeviceCollection.h"
 
-#include "DataFormats/EgammaReco/interface/EleSeedSoA.h"
-#include "DataFormats/EgammaReco/interface/alpaka/EleSeedDeviceCollection.h"
+#include "DataFormats/EgammaReco/interface/ElectronSeedSoA.h"
+#include "DataFormats/EgammaReco/interface/alpaka/ElectronSeedDeviceCollection.h"

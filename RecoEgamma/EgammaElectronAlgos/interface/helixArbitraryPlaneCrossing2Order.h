@@ -38,11 +38,11 @@ namespace propagators {
     }
 
     constexpr inline Vec3d directionInDouble(const double theRho,
-                                              const double s,
-                                              const double cosPhi0,
-                                              const double sinPhi0,
-                                              const double cosTheta,
-                                              const double sinThetaI) {
+                                             const double s,
+                                             const double cosPhi0,
+                                             const double sinPhi0,
+                                             const double cosTheta,
+                                             const double sinThetaI) {
       const double dph = s * theRho / sinThetaI;
 
       Vec3d res;
@@ -56,9 +56,9 @@ namespace propagators {
 
     template <typename TAcc, PropagationDirection propDir>
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE bool solutionByDirection(TAcc const& acc,
-                                                                  double& path,  //0
-                                                                  const double dS1,
-                                                                  const double dS2) {
+                                                                 double& path,  //0
+                                                                 const double dS1,
+                                                                 const double dS2) {
       bool valid = false;
 
       if constexpr (propDir == PropagationDirection::anyDirection) {
@@ -178,6 +178,6 @@ namespace propagators {
     }
   }
 
-}  // namespace Propagators
+}  // namespace propagators
 
-#endif // RecoEgamma_EgammaElectronAlgos_interface_helixArbitraryPlaneCrossing2Order_h
+#endif  // RecoEgamma_EgammaElectronAlgos_interface_helixArbitraryPlaneCrossing2Order_h

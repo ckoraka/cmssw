@@ -28,13 +28,13 @@ namespace propagators {
     if (select) {
       const double o = 1.0 / rho;
       return Vec3d(point[0] + (-sinPhi0 * (1.0 - cachedCDPhi) + cosPhi0 * cachedSDPhi) * o,
-                    point[1] + (cosPhi0 * (1.0 - cachedCDPhi) + sinPhi0 * cachedSDPhi) * o,
-                    point[2] + s * cosTheta);
+                   point[1] + (cosPhi0 * (1.0 - cachedCDPhi) + sinPhi0 * cachedSDPhi) * o,
+                   point[2] + s * cosTheta);
     } else {
       const double st = cachedS * sinTheta;
       return Vec3d(point[0] + (cosPhi0 - st * 0.5 * rho * sinPhi0) * st,
-                    point[1] + (sinPhi0 + st * 0.5 * rho * cosPhi0) * st,
-                    point[2] + st * cosTheta / sinTheta);
+                   point[1] + (sinPhi0 + st * 0.5 * rho * cosPhi0) * st,
+                   point[2] + st * cosTheta / sinTheta);
     }
   }
 
@@ -42,23 +42,23 @@ namespace propagators {
   //  Direction of helix after path-length s
   // ---------------------------------------------------------
   constexpr Vec3d directionInHelix(const bool select,
-                                    const double s,
-                                    const double rho,
-                                    const double cosPhi0,
-                                    const double sinPhi0,
-                                    const double cosTheta,
-                                    const double sinTheta,
-                                    const double cachedSDPhi,
-                                    const double cachedCDPhi) {
+                                   const double s,
+                                   const double rho,
+                                   const double cosPhi0,
+                                   const double sinPhi0,
+                                   const double cosTheta,
+                                   const double sinTheta,
+                                   const double cachedSDPhi,
+                                   const double cachedCDPhi) {
     if (select) {
       return Vec3d(cosPhi0 * cachedCDPhi - sinPhi0 * cachedSDPhi,
-                    sinPhi0 * cachedCDPhi + cosPhi0 * cachedSDPhi,
-                    cosTheta / sinTheta);
+                   sinPhi0 * cachedCDPhi + cosPhi0 * cachedSDPhi,
+                   cosTheta / sinTheta);
     } else {
       const double dph = s * rho * sinTheta;
       return Vec3d(cosPhi0 - (sinPhi0 + 0.5 * cosPhi0 * dph) * dph,
-                    sinPhi0 + (cosPhi0 - 0.5 * sinPhi0 * dph) * dph,
-                    cosTheta / sinTheta);
+                   sinPhi0 + (cosPhi0 - 0.5 * sinPhi0 * dph) * dph,
+                   cosTheta / sinTheta);
     }
   }
 
@@ -131,16 +131,16 @@ namespace propagators {
     //  Compute final position and direction
     // ---------------------------------------------------------
     position = positionInHelix(cachedDPhi_flag,
-                                pathLength,
-                                point,
-                                curvature,
-                                cosPhi0,
-                                sinPhi0,
-                                cosTheta,
-                                sinTheta,
-                                cachedS,
-                                cachedSDPhi,
-                                cachedCDPhi);
+                               pathLength,
+                               point,
+                               curvature,
+                               cosPhi0,
+                               sinPhi0,
+                               cosTheta,
+                               sinTheta,
+                               cachedS,
+                               cachedSDPhi,
+                               cachedCDPhi);
 
     dir = directionInHelix(
         cachedDPhi_flag, pathLength, curvature, cosPhi0, sinPhi0, cosTheta, sinTheta, cachedSDPhi, cachedCDPhi);
@@ -148,6 +148,6 @@ namespace propagators {
     solExists = true;
   }
 
-}  // namespace Propagators
+}  // namespace propagators
 
 #endif  // RecoEgamma_EgammaElectronAlgos_interface_helixForwardPlaneCrossing_h

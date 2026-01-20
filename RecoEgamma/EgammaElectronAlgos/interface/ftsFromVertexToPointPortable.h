@@ -7,7 +7,6 @@
 
 using Vec3d = cms::alpakatools::math::Phys3DVector<double>;
 
-
 namespace egamma {
 
   // FreeTrajectoryState template structure
@@ -30,11 +29,11 @@ namespace egamma {
   template <typename TAcc>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE FreeTrajectoryState
   ftsFromVertexToPoint(TAcc const& acc,
-                        const Vec3d& xmeas,    // Measured point
-                        const Vec3d& xvert,    // Vertex point
-                        const float momentum,  // Magnitude of momentum
-                        const int charge,      // Charge of the particle
-                        const float BInTesla   // Magnetic field (in Tesla)
+                       const Vec3d& xmeas,    // Measured point
+                       const Vec3d& xvert,    // Vertex point
+                       const float momentum,  // Magnitude of momentum
+                       const int charge,      // Charge of the particle
+                       const float BInTesla   // Magnetic field (in Tesla)
   ) {
     using T = Vec3d::value_type;
     //

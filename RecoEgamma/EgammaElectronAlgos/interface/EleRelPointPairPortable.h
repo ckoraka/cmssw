@@ -4,7 +4,6 @@
 #include <cmath>
 #include "DataFormats/EgammaReco/interface/alpaka/Phys3DVector.h"
 
-
 //==========================================================================
 // When wanting to compute and compare several characteristics of one or two
 // points, relatively to a given origin, using GPU-friendly Phys3DVector

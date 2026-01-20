@@ -1,6 +1,6 @@
 #include <alpaka/alpaka.hpp>
 
-#include "DataFormats/EgammaReco/interface/alpaka/EleSeedDeviceCollection.h"
+#include "DataFormats/EgammaReco/interface/alpaka/ElectronSeedDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/alpaka/SuperClusterDeviceCollection.h"
 #include "MagneticField/ParametrizedEngine/interface/ParabolicParametrizedMagneticField.h"
 
@@ -47,18 +47,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   reco::SuperClusterDeviceCollection::ConstView view,
                                   int32_t size) const {
-			for (int32_t i : uniform_elements(acc, size)) 
-			{
-				auto sc = view[i];
-				printf("For SC i=%d Energy is :%f , theta is :%f , and r is %lf and phi is %lf,  \n",i,sc.scEnergy(),sc.scSeedTheta(), sc.scR(),sc.scPhi() ) ;
-				float x = sc.scR() * alpaka::math::sin(acc,sc.scSeedTheta()) * alpaka::math::cos(acc,sc.scPhi());
-				float y = sc.scR() * alpaka::math::sin(acc,sc.scSeedTheta()) * alpaka::math::sin(acc,sc.scPhi());
-				float z = sc.scR() * alpaka::math::cos(acc,sc.scSeedTheta());
-				printf("x: %lf,  y: %lf,  z %lf ",x,z,y);
-				Vec3d position{x,y,z};
-				printf("  Value of perp2 %lf \n",x*x+y*y);
-				printf("Calculate the magnetic field with the parabolic approximation at the SC position : %f\n",magneticFieldParabolicPortable::magneticFieldAtPoint(acc, position));			
-			}
+      for (int32_t i : uniform_elements(acc, size)) {
+        auto sc = view[i];
+        printf("For SC i=%d Energy is :%f , theta is :%f , and r is %lf and phi is %lf,  \n",
+               i,
+               sc.scEnergy(),
+               sc.scSeedTheta(),
+               sc.scR(),
+               sc.scPhi());
+        float x = sc.scR() * alpaka::math::sin(acc, sc.scSeedTheta()) * alpaka::math::cos(acc, sc.scPhi());
+        float y = sc.scR() * alpaka::math::sin(acc, sc.scSeedTheta()) * alpaka::math::sin(acc, sc.scPhi());
+        float z = sc.scR() * alpaka::math::cos(acc, sc.scSeedTheta());
+        printf("x: %lf,  y: %lf,  z %lf ", x, z, y);
+        Vec3d position{x, y, z};
+        printf("  Value of perp2 %lf \n", x * x + y * y);
+        printf("Calculate the magnetic field with the parabolic approximation at the SC position : %f\n",
+               magneticFieldParabolicPortable::magneticFieldAtPoint(acc, position));
+      }
     }
   };
 
@@ -66,7 +71,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   class PrintElectronSeedSoA {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
-    ALPAKA_FN_ACC void operator()(TAcc const& acc, reco::EleSeedDeviceCollection::ConstView view, int32_t size) const {
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  reco::ElectronSeedDeviceCollection::ConstView view,
+                                  int32_t size) const {
       for (int32_t i : uniform_elements(acc, size)) {
         auto seed = view[i];
 
@@ -103,7 +110,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  reco::EleSeedDeviceCollection::View viewEleSeeds,
+                                  reco::ElectronSeedDeviceCollection::View viewEleSeeds,
                                   const int32_t sizeEleSeeds,
                                   reco::SuperClusterDeviceCollection::View viewSCs,
                                   const int32_t sizeSCs,
@@ -142,13 +149,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           for (int charge : {1, -1}) {
             const float c = (charge == 1 ? -2.99792458e-3f : +2.99792458e-3f);
 
-            auto newfreeTS = egamma::ftsFromVertexToPoint(
-                acc,
-                positionSC,
-                vertex,
-                e,
-                charge,
-                magneticFieldParabolicPortable::magneticFieldAtPoint(acc, positionSC));
+            auto newfreeTS =
+                egamma::ftsFromVertexToPoint(acc,
+                                             positionSC,
+                                             vertex,
+                                             e,
+                                             charge,
+                                             magneticFieldParabolicPortable::magneticFieldAtPoint(acc, positionSC));
 
             const Vec3d position(newfreeTS.get_position());
             const Vec3d momentum(newfreeTS.get_momentum());
@@ -214,13 +221,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             if (!(eleSeed.hit1isValid()))
               continue;
 
-            auto firstMatchFreeTraj = egamma::ftsFromVertexToPoint(
-                acc,
-                hitPosition,
-                vertexUpdated,
-                e,
-                charge,
-                magneticFieldParabolicPortable::magneticFieldAtPoint(acc, hitPosition));
+            auto firstMatchFreeTraj =
+                egamma::ftsFromVertexToPoint(acc,
+                                             hitPosition,
+                                             vertexUpdated,
+                                             e,
+                                             charge,
+                                             magneticFieldParabolicPortable::magneticFieldAtPoint(acc, hitPosition));
             Vec3d position2(firstMatchFreeTraj.get_position());
             Vec3d momentum2(firstMatchFreeTraj.get_momentum());
 
@@ -261,7 +268,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             if (!theSolExists)
               continue;
 
-            egamma::EleRelPointPairPortable<typename Vec3d::value_type> pair2(hit2Position, propagatedPos, vertexUpdated);
+            egamma::EleRelPointPairPortable<typename Vec3d::value_type> pair2(
+                hit2Position, propagatedPos, vertexUpdated);
 
             const float dPhiMax2 = getCutValue(acc, et, 0.003f, 0.f, 0.f);
             const float dRZMax2 = getCutValue(acc, et, 0.05f, 30.f, -0.002f);
@@ -280,7 +288,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   };
 
   //---- Kernel launch for printing the SC SoA collection
-  void PixelMatchingAlgo::printEleSeeds(Queue& queue, const reco::EleSeedDeviceCollection& collection) const {
+  void PixelMatchingAlgo::printEleSeeds(Queue& queue, const reco::ElectronSeedDeviceCollection& collection) const {
     uint32_t items = 32;
     uint32_t groups = divide_up_by(collection->metadata().size(), items);
     auto workDiv = make_workdiv<Acc1D>(groups, items);
@@ -297,7 +305,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   //---- Kernel launch for SC and seed matching
   void PixelMatchingAlgo::matchSeeds(Queue& queue,
-                                     reco::EleSeedDeviceCollection& collection,
+                                     reco::ElectronSeedDeviceCollection& collection,
                                      reco::SuperClusterDeviceCollection& collectionSCs,
                                      double vtx_X,
                                      double vtx_Y,

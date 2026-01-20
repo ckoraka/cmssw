@@ -10,12 +10,12 @@
 
 #include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
-#include "DataFormats/EgammaReco/interface/EleSeedSoA.h"
+#include "DataFormats/EgammaReco/interface/ElectronSeedSoA.h"
 #include "DataFormats/EgammaReco/interface/SuperClusterSoA.h"
 #include "DataFormats/EgammaReco/interface/alpaka/SuperClusterDeviceCollection.h"
 #include "DataFormats/EgammaReco/interface/SuperClusterHostCollection.h"
-#include "DataFormats/EgammaReco/interface/alpaka/EleSeedDeviceCollection.h"
-#include "DataFormats/EgammaReco/interface/EleSeedHostCollection.h"
+#include "DataFormats/EgammaReco/interface/alpaka/ElectronSeedDeviceCollection.h"
+#include "DataFormats/EgammaReco/interface/ElectronSeedHostCollection.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
@@ -65,7 +65,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       const std::vector<TrajectorySeed>& seedVec = event.get(initialSeedsToken_);
       int32_t seedCollectionSize = seedVec.size();
-      reco::EleSeedHostCollection hostProductSeeds{seedCollectionSize, event.queue()};
+      reco::ElectronSeedHostCollection hostProductSeeds{seedCollectionSize, event.queue()};
 
       auto& viewSCs = hostProductSCs.view();
       auto& viewSeeds = hostProductSeeds.view();
@@ -143,7 +143,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       // Create device products & copy to device
       reco::SuperClusterDeviceCollection deviceProductSCs{superClusterCollectionSize, event.queue()};
-      reco::EleSeedDeviceCollection deviceProductSeeds{seedCollectionSize, event.queue()};
+      reco::ElectronSeedDeviceCollection deviceProductSeeds{seedCollectionSize, event.queue()};
       alpaka::memcpy(event.queue(), deviceProductSCs.buffer(), hostProductSCs.buffer());
       alpaka::memcpy(event.queue(), deviceProductSeeds.buffer(), hostProductSeeds.buffer());
 
@@ -161,7 +161,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
   private:
-    const device::EDPutToken<reco::EleSeedDeviceCollection> deviceToken_;
+    const device::EDPutToken<reco::ElectronSeedDeviceCollection> deviceToken_;
     const edm::EDGetTokenT<TrajectorySeedCollection> initialSeedsToken_;
     const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
     const edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;

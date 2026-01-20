@@ -19,11 +19,11 @@ namespace propagators {
 
   template <PropagationDirection propDir>
   constexpr Vec3d chooseSolution(const Vec3d& d1,
-                                  const Vec3d& d2,
-                                  const Vec3d& startingPos,
-                                  const Vec3d& startingDir,
-                                  int& theActualDir,
-                                  bool& theSolExists) {
+                                 const Vec3d& d2,
+                                 const Vec3d& startingPos,
+                                 const Vec3d& startingDir,
+                                 int& theActualDir,
+                                 bool& theSolExists) {
     Vec3d theD;
 
     const double momProj1 = startingDir[0] * d1[0] + startingDir[1] * d1[1];
@@ -76,10 +76,10 @@ namespace propagators {
     constexpr double straightLineCutoff = 1.e-7;
 
     const double abs_rho = alpaka::math::abs(acc, rho);
-    const double startingDir_2dnorm = startingPos.partial_norm(acc);  
+    const double startingDir_2dnorm = startingPos.partial_norm(acc);
 
     auto compute_position = [&](const double s) -> Vec3d {
-      const double norm = startingDir.norm(acc);  
+      const double norm = startingDir.norm(acc);
       const double scale = norm > 0. ? s / norm : 0.;  //that is, for "zero" vector this will be identity operation
       return cms::alpakatools::math::axpy(scale, startingDir, startingPos);
     };
@@ -122,7 +122,7 @@ namespace propagators {
     double A, B, C;
     bool solveForX;
 
-    if (alpaka::math::abs(acc,nx) > alpaka::math::abs(acc,ny)) {
+    if (alpaka::math::abs(acc, nx) > alpaka::math::abs(acc, ny)) {
       solveForX = false;
       nfac = ny / nx;
       dfac = distToPlane / nx;
@@ -204,4 +204,4 @@ namespace propagators {
 
 }  // namespace propagators
 
-#endif // RecoEgamma_EgammaElectronAlgos_interface_helixBarrelPlaneCrossing_h
+#endif  // RecoEgamma_EgammaElectronAlgos_interface_helixBarrelPlaneCrossing_h

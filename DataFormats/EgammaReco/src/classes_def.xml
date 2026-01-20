@@ -5,10 +5,10 @@
   <class name="reco::SuperClusterHostCollection"/>
   <class name="edm::Wrapper<reco::SuperClusterHostCollection>" splitLevel="0"/>
 
-  <class name="reco::EleSeedSoA"/>
-  <class name="reco::EleSeedSoA::View"/>
-  <class name="reco::EleSeedHostCollection"/>
-  <class name="edm::Wrapper<reco::EleSeedHostCollection>" splitLevel="0"/>
+  <class name="reco::ElectronSeedSoA"/>
+  <class name="reco::ElectronSeedSoA::View"/>
+  <class name="reco::ElectronSeedHostCollection"/>
+  <class name="edm::Wrapper<reco::ElectronSeedHostCollection>" splitLevel="0"/>
 
   <class name="edm::RefToBase<reco::CaloCluster>"  rntupleStreamerMode="true"/>
   <class name="edm::reftobase::BaseHolder<reco::CaloCluster>"/>
