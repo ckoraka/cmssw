@@ -8,7 +8,7 @@
 using Vec3d = cms::alpakatools::math::Phys3DVector<double>;
 
 
-namespace ftsFromVertexToPointPortable {
+namespace egamma {
 
   // FreeTrajectoryState template structure
   class FreeTrajectoryState {
@@ -72,6 +72,6 @@ namespace ftsFromVertexToPointPortable {
     return FreeTrajectoryState(pNew, xmeas, charge);
   }
 
-}  // namespace ftsFromVertexToPointPortable
+}  // namespace egamma
 
 #endif  // RecoEgamma_EgammaElectronAlgos_interface_alpaka_ftsFromVertexToPointPortable_h

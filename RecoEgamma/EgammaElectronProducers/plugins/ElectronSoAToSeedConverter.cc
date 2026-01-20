@@ -17,9 +17,9 @@
 #include "DataFormats/EgammaReco/interface/ElectronSeed.h"
 #include "DataFormats/EgammaReco/interface/ElectronSeedFwd.h"
 
-class ElectronSeedConverter : public edm::global::EDProducer<> {
+class ElectronSoAToSeedConverter : public edm::global::EDProducer<> {
 public:
-  explicit ElectronSeedConverter(const edm::ParameterSet&);
+  explicit ElectronSoAToSeedConverter(const edm::ParameterSet&);
 
   void produce(edm::StreamID, edm::Event&, const edm::EventSetup&) const final;
 
@@ -32,7 +32,7 @@ private:
   const edm::EDPutTokenT<reco::ElectronSeedCollection> putToken_;
 };
 
-void ElectronSeedConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void ElectronSoAToSeedConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("initialSeeds", edm::InputTag{"hltElePixelSeedsCombined"});
   desc.add<edm::InputTag>("eleSeedsSoA", edm::InputTag{"ElectronNHitSeedAlpakaProducer"});
@@ -40,13 +40,13 @@ void ElectronSeedConverter::fillDescriptions(edm::ConfigurationDescriptions& des
   descriptions.add("electronNHitSeedConverter", desc);
 }
 
-ElectronSeedConverter::ElectronSeedConverter(const edm::ParameterSet& pset)
+ElectronSoAToSeedConverter::ElectronSoAToSeedConverter(const edm::ParameterSet& pset)
     : initialSeedsToken_(consumes(pset.getParameter<edm::InputTag>("initialSeeds"))),
       matchedEleSeedSoAToken_(consumes(pset.getParameter<edm::InputTag>("eleSeedsSoA"))),
       superClustersTokens_(consumes(pset.getParameter<edm::InputTag>("superClusters"))),
       putToken_(produces()) {}
 
-void ElectronSeedConverter::produce(edm::StreamID, edm::Event& event, const edm::EventSetup& iSetup) const {
+void ElectronSoAToSeedConverter::produce(edm::StreamID, edm::Event& event, const edm::EventSetup& iSetup) const {
   auto const& view = event.get(matchedEleSeedSoAToken_).const_view();
 
   reco::ElectronSeedCollection eleSeeds{};
@@ -71,7 +71,7 @@ void ElectronSeedConverter::produce(edm::StreamID, edm::Event& event, const edm:
         eleSeeds.emplace_back(eleSeed);
 
       } else {
-        edm::LogWarning("ElectronSeedConverter")
+        edm::LogWarning("ElectronSoAToSeedConverter")
             << "Index out of bounds for SC ID: " << matchedScID << " or Seed ID: " << seedID;
       }
     }
@@ -81,4 +81,4 @@ void ElectronSeedConverter::produce(edm::StreamID, edm::Event& event, const edm:
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(ElectronSeedConverter);
+DEFINE_FWK_MODULE(ElectronSoAToSeedConverter);

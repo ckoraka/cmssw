@@ -9,9 +9,9 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
 #include "RecoEgamma/EgammaElectronAlgos/interface/ftsFromVertexToPointPortable.h"
-#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixBarrelPlaneCrossingByCircle.h"
-#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixArbitraryPlaneCrossing.h"
-#include "RecoEgamma/EgammaElectronAlgos/interface/alpaka/helixForwardPlaneCrossing.h"
+#include "RecoEgamma/EgammaElectronAlgos/interface/helixBarrelPlaneCrossingByCircle.h"
+#include "RecoEgamma/EgammaElectronAlgos/interface/helixArbitraryPlaneCrossing.h"
+#include "RecoEgamma/EgammaElectronAlgos/interface/helixForwardPlaneCrossing.h"
 
 #include "PixelMatchingAlgo.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/EleRelPointPairPortable.h"
@@ -142,7 +142,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           for (int charge : {1, -1}) {
             const float c = (charge == 1 ? -2.99792458e-3f : +2.99792458e-3f);
 
-            auto newfreeTS = ftsFromVertexToPointPortable::ftsFromVertexToPoint(
+            auto newfreeTS = egamma::ftsFromVertexToPoint(
                 acc,
                 positionSC,
                 vertex,
@@ -168,7 +168,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
             auto u = plane.normalVector();
             if (alpaka::math::abs(acc, u[2]) < small) {
-              Propagators::helixBarrelPlaneCrossing<TAcc, Propagators::PropagationDirection::oppositeToMomentum>(
+              propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
                   acc,
                   position,
                   momentum,
@@ -180,10 +180,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                   propagatedMom,
                   s);
             } else if ((alpaka::math::abs(acc, u[0]) < small) && (alpaka::math::abs(acc, u[1]) < small)) {
-              Propagators::helixForwardPlaneCrossing<TAcc, Propagators::PropagationDirection::oppositeToMomentum>(
+              propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
                   acc, position, momentum, rho, plane, s, propagatedPos, propagatedMom, theSolExists);
             } else {
-              Propagators::helixArbitraryPlaneCrossing<TAcc, Propagators::PropagationDirection::oppositeToMomentum>(
+              propagators::helixArbitraryPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
                   acc, position, momentum, rho, plane, s, propagatedPos, propagatedMom, theSolExists);
             }
 
@@ -214,7 +214,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             if (!(eleSeed.hit1isValid()))
               continue;
 
-            auto firstMatchFreeTraj = ftsFromVertexToPointPortable::ftsFromVertexToPoint(
+            auto firstMatchFreeTraj = egamma::ftsFromVertexToPoint(
                 acc,
                 hitPosition,
                 vertexUpdated,
@@ -235,7 +235,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             u = plane2.normalVector();
 
             if (alpaka::math::abs(acc, u[2]) < small) {
-              Propagators::helixBarrelPlaneCrossing<TAcc, Propagators::PropagationDirection::alongMomentum>(
+              propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                   acc,
                   position2,
                   momentum2,
@@ -247,10 +247,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                   propagatedMom,
                   s);
             } else if ((alpaka::math::abs(acc, u[0]) < small) && (alpaka::math::abs(acc, u[1]) < small)) {
-              Propagators::helixForwardPlaneCrossing<TAcc, Propagators::PropagationDirection::alongMomentum>(
+              propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                   acc, position2, momentum2, rho, plane2, s, propagatedPos, propagatedMom, theSolExists);
             } else {
-              Propagators::helixArbitraryPlaneCrossing<TAcc, Propagators::PropagationDirection::alongMomentum>(
+              propagators::helixArbitraryPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                   acc, position2, momentum2, rho, plane2, s, propagatedPos, propagatedMom, theSolExists);
             }
 
