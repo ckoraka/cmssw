@@ -13,6 +13,7 @@ namespace egamma {
 
     // Constructor
     ALPAKA_FN_HOST_ACC Plane(const Vec3& pos, const Vec3& rot) {
+      CMS_UNROLL_LOOP
       for (int i = 0; i < 3; i++) {
         position[i] = pos[i];
         rotation[i] = rot[i];

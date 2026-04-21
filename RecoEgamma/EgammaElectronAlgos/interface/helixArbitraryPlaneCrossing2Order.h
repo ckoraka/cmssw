@@ -147,8 +147,10 @@ namespace propagators {
         // Standard solution for quadratic equations
         //
         const double deq = deq1 + 2 * deq2;
-        if (deq < 0.)
+        if (deq < 0.) {
           validPath = false;
+          return;
+        }
         const double ceq = ceq2 + alpaka::math::copysign(acc, alpaka::math::sqrt(acc, deq), ceq2);
         dS1 = (ceq / ceq1) * theSinThetaI;
         dS2 = -2. * (ceq3 / ceq) * theSinThetaI;

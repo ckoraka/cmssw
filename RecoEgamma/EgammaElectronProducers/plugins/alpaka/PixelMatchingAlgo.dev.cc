@@ -106,6 +106,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
   };
 
+  // Set true to skip all dPhi cuts (for endcap efficiency diagnostics only)
+  constexpr bool kDisableDPhiCuts = false;
+  // Set true to evaluate B field at the midpoint between SC and the first
+  // hit detector surface rather than at the SC position.  Reduces the
+  // systematic bias from using a single B-field sample for the ~280 cm
+  // backward propagation in the endcap.
+  constexpr bool kUseMidpointBField = true;
+
   class SeedToSuperClusterMatcher {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
@@ -149,13 +157,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           for (int charge : {1, -1}) {
             const float c = (charge == 1 ? -2.99792458e-3f : +2.99792458e-3f);
 
+            // --- B field for first-hit backward propagation ---
+            const float bFieldFirst =
+                kUseMidpointBField
+                    ? magneticFieldParabolicPortable::magneticFieldAtPoint(
+                          acc,
+                          Vec3d(0.5 * (positionSC[0] + surfPosition[0]),
+                                0.5 * (positionSC[1] + surfPosition[1]),
+                                0.5 * (positionSC[2] + surfPosition[2])))
+                    : magneticFieldParabolicPortable::magneticFieldAtPoint(acc, positionSC);
+
             auto newfreeTS =
-                egamma::ftsFromVertexToPoint(acc,
-                                             positionSC,
-                                             vertex,
-                                             e,
-                                             charge,
-                                             magneticFieldParabolicPortable::magneticFieldAtPoint(acc, positionSC));
+                egamma::ftsFromVertexToPoint(acc, positionSC, vertex, e, charge, bFieldFirst);
 
             const Vec3d position(newfreeTS.get_position());
             const Vec3d momentum(newfreeTS.get_momentum());
@@ -166,26 +179,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             Vec3d propagatedPos(0);
             Vec3d propagatedMom(0);
 
-            double rho = (c * magneticFieldParabolicPortable::magneticFieldAtPoint(acc, positionSC)) /
-                         momentum.partial_norm(acc);
-
-            egamma::Plane<typename Vec3d::value_type> plane(surfPosition, surfRotation);
+            double rho = (c * bFieldFirst) / momentum.partial_norm(acc);
 
             constexpr float small = 1.e-6;
 
+            egamma::Plane<typename Vec3d::value_type> plane(surfPosition, surfRotation);
             auto u = plane.normalVector();
+
             if (alpaka::math::abs(acc, u[2]) < small) {
               propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
-                  acc,
-                  position,
-                  momentum,
-                  rho,
-                  surfPosition,
-                  surfRotation,
-                  theSolExists,
-                  propagatedPos,
-                  propagatedMom,
-                  s);
+                  acc, position, momentum, rho, surfPosition, surfRotation, theSolExists, propagatedPos, propagatedMom, s);
             } else if ((alpaka::math::abs(acc, u[0]) < small) && (alpaka::math::abs(acc, u[1]) < small)) {
               propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
                   acc, position, momentum, rho, plane, s, propagatedPos, propagatedMom, theSolExists);
@@ -197,19 +200,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             if (!theSolExists)
               continue;
 
-            // Momentum should be renormalized - might want to add this in propagator ?
-            const double scale = momentum.norm(acc) / propagatedMom.norm(acc);
+            propagatedMom *= momentum.norm(acc) / propagatedMom.norm(acc);
 
-            propagatedMom *= scale;
-
-            // Construct relative point-pair struct for applying quality cuts
             egamma::EleRelPointPairPortable<typename Vec3d::value_type> pair(hitPosition, propagatedPos, vertex);
 
             const float dPhiMax = getCutValue(acc, et, 0.05f, 20.f, -0.002f);
             const float dRZMax = getCutValue(acc, et, 9999.f, 0.f, 0.f);
-            const float dRZ = eleSeed.hit0detectorID() ? pair.dPerp(acc) : pair.dZ();
+            const float dRZ = eleSeed.hit0detectorID() != 1 ? pair.dPerp(acc) : pair.dZ();
 
-            if ((dPhiMax >= 0 && alpaka::math::abs(acc, pair.dPhi(acc)) > dPhiMax) ||
+            if ((!kDisableDPhiCuts && dPhiMax >= 0 && alpaka::math::abs(acc, pair.dPhi(acc)) > dPhiMax) ||
                 (dRZMax >= 0 && alpaka::math::abs(acc, dRZ) > dRZMax))
               continue;
 
@@ -217,22 +216,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                 getZVtxFromExtrapolation<TAcc, typename Vec3d::value_type>(acc, vertex, hitPosition, positionSC);
             Vec3d vertexUpdated(vertex[0], vertex[1], zVertex);
 
-            // Move to the second hit of the seed
+            // --- Second hit ---
             if (!(eleSeed.hit1isValid()))
               continue;
 
+            // FTS at hit0: reused for both hit1 and hit2 propagation, matching
+            // legacy TrajSeedMatcher which propagates the same firstMatchFreeTraj
+            // to each subsequent detector surface.
+            const float bFieldHit0 = magneticFieldParabolicPortable::magneticFieldAtPoint(acc, hitPosition);
             auto firstMatchFreeTraj =
-                egamma::ftsFromVertexToPoint(acc,
-                                             hitPosition,
-                                             vertexUpdated,
-                                             e,
-                                             charge,
-                                             magneticFieldParabolicPortable::magneticFieldAtPoint(acc, hitPosition));
+                egamma::ftsFromVertexToPoint(acc, hitPosition, vertexUpdated, e, charge, bFieldHit0);
             Vec3d position2(firstMatchFreeTraj.get_position());
             Vec3d momentum2(firstMatchFreeTraj.get_momentum());
 
-            rho = (c * magneticFieldParabolicPortable::magneticFieldAtPoint(acc, hitPosition)) /
-                  momentum2.partial_norm(acc);
+            rho = (c * bFieldHit0) / momentum2.partial_norm(acc);
 
             theSolExists = false;
             propagatedPos = Vec3d(0);
@@ -243,16 +240,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
             if (alpaka::math::abs(acc, u[2]) < small) {
               propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
-                  acc,
-                  position2,
-                  momentum2,
-                  rho,
-                  surf2Position,
-                  surf2Rotation,
-                  theSolExists,
-                  propagatedPos,
-                  propagatedMom,
-                  s);
+                  acc, position2, momentum2, rho, surf2Position, surf2Rotation, theSolExists, propagatedPos, propagatedMom, s);
             } else if ((alpaka::math::abs(acc, u[0]) < small) && (alpaka::math::abs(acc, u[1]) < small)) {
               propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                   acc, position2, momentum2, rho, plane2, s, propagatedPos, propagatedMom, theSolExists);
@@ -261,12 +249,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                   acc, position2, momentum2, rho, plane2, s, propagatedPos, propagatedMom, theSolExists);
             }
 
-            // FIX: Double check if this is a bug --> do I scale original momentum?
-            const double scale2 = momentum.norm(acc) / propagatedMom.norm(acc);
-            propagatedMom *= scale2;
-
             if (!theSolExists)
               continue;
+
+            propagatedMom *= momentum2.norm(acc) / propagatedMom.norm(acc);
 
             egamma::EleRelPointPairPortable<typename Vec3d::value_type> pair2(
                 hit2Position, propagatedPos, vertexUpdated);
@@ -275,9 +261,49 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             const float dRZMax2 = getCutValue(acc, et, 0.05f, 30.f, -0.002f);
             const float dRZ2 = eleSeed.hit1detectorID() != 1 ? pair2.dPerp(acc) : pair2.dZ();
 
-            if ((dPhiMax2 >= 0 && alpaka::math::abs(acc, pair2.dPhi(acc)) > dPhiMax2) ||
+            if ((!kDisableDPhiCuts && dPhiMax2 >= 0 && alpaka::math::abs(acc, pair2.dPhi(acc)) > dPhiMax2) ||
                 (dRZMax2 >= 0 && alpaka::math::abs(acc, dRZ2) > dRZMax2))
               continue;
+
+            // --- Third hit (triplet seeds only) ---
+            if (eleSeed.nHits() > 2 && eleSeed.hit2isValid()) {
+              Vec3d hit3Position(eleSeed.hit2Pos().x(), eleSeed.hit2Pos().y(), eleSeed.hit2Pos().z());
+              Vec3d surf3Position(eleSeed.surf2Pos().x(), eleSeed.surf2Pos().y(), eleSeed.surf2Pos().z());
+              Vec3d surf3Rotation(eleSeed.surf2Rot().x(), eleSeed.surf2Rot().y(), eleSeed.surf2Rot().z());
+
+              bool thirdSolExists = false;
+              Vec3d propagatedPos3(0), propagatedMom3(0);
+              double s3 = 0;
+
+              egamma::Plane<typename Vec3d::value_type> plane3(surf3Position, surf3Rotation);
+              auto u3 = plane3.normalVector();
+
+              if (alpaka::math::abs(acc, u3[2]) < small) {
+                propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
+                    acc, position2, momentum2, rho, surf3Position, surf3Rotation,
+                    thirdSolExists, propagatedPos3, propagatedMom3, s3);
+              } else if ((alpaka::math::abs(acc, u3[0]) < small) && (alpaka::math::abs(acc, u3[1]) < small)) {
+                propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
+                    acc, position2, momentum2, rho, plane3, s3, propagatedPos3, propagatedMom3, thirdSolExists);
+              } else {
+                propagators::helixArbitraryPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
+                    acc, position2, momentum2, rho, plane3, s3, propagatedPos3, propagatedMom3, thirdSolExists);
+              }
+
+              if (!thirdSolExists)
+                continue;
+
+              egamma::EleRelPointPairPortable<typename Vec3d::value_type> pair3(
+                  hit3Position, propagatedPos3, vertexUpdated);
+
+              const float dPhiMax3 = getCutValue(acc, et, 0.003f, 0.f, 0.f);
+              const float dRZMax3 = getCutValue(acc, et, 0.05f, 30.f, -0.002f);
+              const float dRZ3 = eleSeed.hit2detectorID() != 1 ? pair3.dPerp(acc) : pair3.dZ();
+
+              if ((!kDisableDPhiCuts && dPhiMax3 >= 0 && alpaka::math::abs(acc, pair3.dPhi(acc)) > dPhiMax3) ||
+                  (dRZMax3 >= 0 && alpaka::math::abs(acc, dRZ3) > dRZMax3))
+                continue;
+            }
 
             eleSeed.matchedScID() = static_cast<int16_t>(viewSCs[j].id());
             eleSeed.isMatched() = static_cast<int16_t>(1);
