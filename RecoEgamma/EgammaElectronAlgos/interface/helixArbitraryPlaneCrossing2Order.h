@@ -62,8 +62,9 @@ namespace propagators {
       bool valid = false;
 
       if constexpr (propDir == PropagationDirection::anyDirection) {
+
         valid = true;
-        path = alpaka::math::min(acc, dS1, dS2);
+        path = (alpaka::math::abs(acc, dS1) < alpaka::math::abs(acc, dS2)) ? dS1 : dS2;
       } else {
         constexpr double propSign = (propDir == PropagationDirection::alongMomentum) ? 1. : -1.;
 
@@ -135,7 +136,7 @@ namespace propagators {
 
     //
     // Check for degeneration to linear equation (zero
-    //   curvature, forward plane or direction perp. to plane)
+    // curvature, forward plane or direction perp. to plane)
     //
 
     double dS1, dS2;

@@ -139,6 +139,8 @@ void ElectronSeedConverter::produce(edm::StreamID,
 
   reco::ElectronSeedCollection eleSeeds;
 
+  int nMatched = 0, nDoublets = 0, nDoubletsRejected = 0, nTriplets = 0;
+
   for (int i = 0; i < view.metadata().size(); ++i) {
     if (view[i].isMatched() == 0)
       continue;
@@ -156,21 +158,36 @@ void ElectronSeedConverter::produce(edm::StreamID,
 
     const reco::SuperClusterRef &scRef = superClusterRefs[matchedScID];
     const TrajectorySeed &matchedSeed = initialSeeds[seedID];
+    ++nMatched;
 
     // --- Doublet rejection ---
     if (matchedSeed.nHits() == 2) {
+      ++nDoublets;
       const int nrValidLayers = getNrValidLayersAlongTraj(matchedSeed, scRef, beamSpot,
                                                           forwardPropagator, backwardPropagator,
                                                           navSchool, detLayerGeom, measTkEvt,
                                                           magField);
-      if (nrValidLayers >= kDoubletRejectionValidLayerThreshold)
+      if (nrValidLayers >= kDoubletRejectionValidLayerThreshold) {
+        ++nDoubletsRejected;
         continue;
+      }
+    } else {
+      ++nTriplets;
     }
 
     reco::ElectronSeed eleSeed(matchedSeed);
     eleSeed.setCaloCluster(reco::ElectronSeed::CaloClusterRef(scRef));
     eleSeeds.emplace_back(eleSeed);
   }
+
+  // Print per-event doublet rejection summary
+  edm::LogPrint("ElectronSeedConverter")
+      << "[ElectronSeedConverter] matched=" << nMatched
+      << "  doublets=" << nDoublets
+      << "  doublets_rejected=" << nDoubletsRejected
+      << "  (frac=" << (nDoublets > 0 ? 100.f * nDoubletsRejected / nDoublets : 0.f) << "%)"
+      << "  triplets=" << nTriplets
+      << "  accepted=" << (int)eleSeeds.size();
 
   event.emplace(putToken_, std::move(eleSeeds));
 }

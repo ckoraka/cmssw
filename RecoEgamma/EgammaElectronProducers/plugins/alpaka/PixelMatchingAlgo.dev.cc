@@ -106,13 +106,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
   };
 
-  // Set true to skip all dPhi cuts (for endcap efficiency diagnostics only)
-  constexpr bool kDisableDPhiCuts = false;
-  // Set true to evaluate B field at the midpoint between SC and the first
-  // hit detector surface rather than at the SC position.  Reduces the
-  // systematic bias from using a single B-field sample for the ~280 cm
-  // backward propagation in the endcap.
-  constexpr bool kUseMidpointBField = true;
+  constexpr bool kUseMidpointBField = false; // use B@SC for backward SC->hit0 propagation
+  constexpr bool kUseHitBField = true;  // use B@hit0 for backward SC->hit0 propagation
 
   class SeedToSuperClusterMatcher {
   public:
@@ -157,15 +152,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           for (int charge : {1, -1}) {
             const float c = (charge == 1 ? -2.99792458e-3f : +2.99792458e-3f);
 
-            // --- B field for first-hit backward propagation ---
             const float bFieldFirst =
-                kUseMidpointBField
-                    ? magneticFieldParabolicPortable::magneticFieldAtPoint(
-                          acc,
-                          Vec3d(0.5 * (positionSC[0] + surfPosition[0]),
-                                0.5 * (positionSC[1] + surfPosition[1]),
-                                0.5 * (positionSC[2] + surfPosition[2])))
-                    : magneticFieldParabolicPortable::magneticFieldAtPoint(acc, positionSC);
+                kUseHitBField
+                    ? magneticFieldParabolicPortable::magneticFieldAtPoint(acc, hitPosition)
+                    : kUseMidpointBField
+                          ? magneticFieldParabolicPortable::magneticFieldAtPoint(
+                                acc,
+                                Vec3d(0.5 * (positionSC[0] + surfPosition[0]),
+                                      0.5 * (positionSC[1] + surfPosition[1]),
+                                      0.5 * (positionSC[2] + surfPosition[2])))
+                          : magneticFieldParabolicPortable::magneticFieldAtPoint(acc, positionSC);
 
             auto newfreeTS =
                 egamma::ftsFromVertexToPoint(acc, positionSC, vertex, e, charge, bFieldFirst);
@@ -181,19 +177,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
             double rho = (c * bFieldFirst) / momentum.partial_norm(acc);
 
-            constexpr float small = 1.e-6;
-
+            // Select propagator by detector ID: BPix -> barrel crossing, FPIX -> forward crossing
             egamma::Plane<typename Vec3d::value_type> plane(surfPosition, surfRotation);
-            auto u = plane.normalVector();
-
-            if (alpaka::math::abs(acc, u[2]) < small) {
+            if (eleSeed.hit0detectorID() == 1) {
               propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
                   acc, position, momentum, rho, surfPosition, surfRotation, theSolExists, propagatedPos, propagatedMom, s);
-            } else if ((alpaka::math::abs(acc, u[0]) < small) && (alpaka::math::abs(acc, u[1]) < small)) {
-              propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
-                  acc, position, momentum, rho, plane, s, propagatedPos, propagatedMom, theSolExists);
             } else {
-              propagators::helixArbitraryPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
+              propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
                   acc, position, momentum, rho, plane, s, propagatedPos, propagatedMom, theSolExists);
             }
 
@@ -208,7 +198,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             const float dRZMax = getCutValue(acc, et, 9999.f, 0.f, 0.f);
             const float dRZ = eleSeed.hit0detectorID() != 1 ? pair.dPerp(acc) : pair.dZ();
 
-            if ((!kDisableDPhiCuts && dPhiMax >= 0 && alpaka::math::abs(acc, pair.dPhi(acc)) > dPhiMax) ||
+            if ((dPhiMax >= 0 && alpaka::math::abs(acc, pair.dPhi(acc)) > dPhiMax) ||
                 (dRZMax >= 0 && alpaka::math::abs(acc, dRZ) > dRZMax))
               continue;
 
@@ -220,9 +210,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             if (!(eleSeed.hit1isValid()))
               continue;
 
-            // FTS at hit0: reused for both hit1 and hit2 propagation, matching
-            // legacy TrajSeedMatcher which propagates the same firstMatchFreeTraj
-            // to each subsequent detector surface.
             const float bFieldHit0 = magneticFieldParabolicPortable::magneticFieldAtPoint(acc, hitPosition);
             auto firstMatchFreeTraj =
                 egamma::ftsFromVertexToPoint(acc, hitPosition, vertexUpdated, e, charge, bFieldHit0);
@@ -236,16 +223,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             propagatedMom = Vec3d(0);
 
             egamma::Plane<typename Vec3d::value_type> plane2(surf2Position, surf2Rotation);
-            u = plane2.normalVector();
-
-            if (alpaka::math::abs(acc, u[2]) < small) {
+            if (eleSeed.hit1detectorID() == 1) {
               propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                   acc, position2, momentum2, rho, surf2Position, surf2Rotation, theSolExists, propagatedPos, propagatedMom, s);
-            } else if ((alpaka::math::abs(acc, u[0]) < small) && (alpaka::math::abs(acc, u[1]) < small)) {
-              propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
-                  acc, position2, momentum2, rho, plane2, s, propagatedPos, propagatedMom, theSolExists);
             } else {
-              propagators::helixArbitraryPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
+              propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                   acc, position2, momentum2, rho, plane2, s, propagatedPos, propagatedMom, theSolExists);
             }
 
@@ -261,7 +243,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             const float dRZMax2 = getCutValue(acc, et, 0.05f, 30.f, -0.002f);
             const float dRZ2 = eleSeed.hit1detectorID() != 1 ? pair2.dPerp(acc) : pair2.dZ();
 
-            if ((!kDisableDPhiCuts && dPhiMax2 >= 0 && alpaka::math::abs(acc, pair2.dPhi(acc)) > dPhiMax2) ||
+            if ((dPhiMax2 >= 0 && alpaka::math::abs(acc, pair2.dPhi(acc)) > dPhiMax2) ||
                 (dRZMax2 >= 0 && alpaka::math::abs(acc, dRZ2) > dRZMax2))
               continue;
 
@@ -276,17 +258,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               double s3 = 0;
 
               egamma::Plane<typename Vec3d::value_type> plane3(surf3Position, surf3Rotation);
-              auto u3 = plane3.normalVector();
-
-              if (alpaka::math::abs(acc, u3[2]) < small) {
+              if (eleSeed.hit2detectorID() == 1) {
                 propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                     acc, position2, momentum2, rho, surf3Position, surf3Rotation,
                     thirdSolExists, propagatedPos3, propagatedMom3, s3);
-              } else if ((alpaka::math::abs(acc, u3[0]) < small) && (alpaka::math::abs(acc, u3[1]) < small)) {
-                propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
-                    acc, position2, momentum2, rho, plane3, s3, propagatedPos3, propagatedMom3, thirdSolExists);
               } else {
-                propagators::helixArbitraryPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
+                propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                     acc, position2, momentum2, rho, plane3, s3, propagatedPos3, propagatedMom3, thirdSolExists);
               }
 
@@ -300,7 +277,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               const float dRZMax3 = getCutValue(acc, et, 0.05f, 30.f, -0.002f);
               const float dRZ3 = eleSeed.hit2detectorID() != 1 ? pair3.dPerp(acc) : pair3.dZ();
 
-              if ((!kDisableDPhiCuts && dPhiMax3 >= 0 && alpaka::math::abs(acc, pair3.dPhi(acc)) > dPhiMax3) ||
+              if ((dPhiMax3 >= 0 && alpaka::math::abs(acc, pair3.dPhi(acc)) > dPhiMax3) ||
                   (dRZMax3 >= 0 && alpaka::math::abs(acc, dRZ3) > dRZMax3))
                 continue;
             }
