@@ -39,6 +39,8 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/global/EDProducer.h"
 
+#include "RecoEgamma/EgammaElectronAlgos/interface/TrajSeedMatchHelpers.h"
+
 #include "PixelMatchingAlgo.h"
 
 using Vector3d = Eigen::Matrix<double, 3, 1>;
@@ -52,7 +54,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           deviceToken_{produces()},
           initialSeedsToken_(consumes(pset.getParameter<edm::InputTag>("initialSeeds"))),
           beamSpotToken_(consumes(pset.getParameter<edm::InputTag>("beamSpot"))),
-          superClustersTokens_(consumes(pset.getParameter<edm::InputTag>("superClusters"))) {}
+          superClustersTokens_(consumes(pset.getParameter<edm::InputTag>("superClusters")))
+          , matchingCuts_{makeMatchingCuts(pset.getParameter<std::vector<edm::ParameterSet> >("matchingCuts"))}
+          {}
 
     void produce(edm::StreamID sid, device::Event& event, device::EventSetup const& iSetup) const override {
       auto vprim_ = event.get(beamSpotToken_).position();
@@ -157,6 +161,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<edm::InputTag>("initialSeeds", {"hltElePixelSeedsCombined"});
       desc.add<edm::InputTag>("beamSpot", {"hltOnlineBeamSpot"});
       desc.add<edm::InputTag>("superClusters", {"hltEgammaSuperClustersToPixelMatch"});
+      desc.add<edm::ParameterSetDescription>("matchingCuts", egamma::MatchingCuts::makePSetDescription());
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -166,6 +171,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
     const edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
     PixelMatchingAlgo const algo_{};
+    const std::vector<std::unique_ptr<egamma::MatchingCuts> > matchingCuts_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
