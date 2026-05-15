@@ -16,7 +16,18 @@ namespace egamma {
         etaBins_(pset.getParameter<std::vector<double> >("etaBins")) {}
 
     virtual ~MatchingCuts() {}
-    // bool operator()(const SCHitMatch& scHitMatch) const;
+    // bool operator()(const SCHitMatch& scHitMatch) const{
+    //   size_t binNr = getBinNr(scHitMatch.eta);
+    //   float dPhiMax = getCutValue(scHitMatch.et, dPhiHighEt_[binNr], dPhiHighEtThres_[binNr], dPhiLowEtGrad_[binNr]);
+    //   if (dPhiMax >= 0 && std::abs(scHitMatch.dPhi) > dPhiMax) {
+    //     return false;
+    //   }
+    //   float dRZMax = getCutValue(scHitMatch.et, dRZHighEt_[binNr], dRZHighEtThres_[binNr], dRZLowEtGrad_[binNr]);
+    //   if (dRZMax >= 0 && std::abs(scHitMatch.dRZ) > dRZMax) {
+    //     return false;
+    //   }
+    //   return true;
+    // };
 
     static edm::ParameterSetDescription makePSetDescription() {
       edm::ParameterSetDescription desc;
@@ -44,10 +55,18 @@ namespace egamma {
     }
 
   private:
-    size_t getBinNr(float eta) const;
-    float getCutValue(float et, float highEt, float highEtThres, float lowEtGrad) const {
-      return highEt + std::min(0.f, et - highEtThres) * lowEtGrad;
-    }
+    // size_t getBinNr(float eta) const{
+    //   const float absEta = std::abs(eta);
+    //   for (size_t etaNr = 0; etaNr < etaBins_.size(); etaNr++) {
+    //     if (absEta < etaBins_[etaNr])
+    //       return etaNr;
+    //   }
+    //   return etaBins_.size();
+    // }
+
+    // float getCutValue(float et, float highEt, float highEtThres, float lowEtGrad) const {
+    //   return highEt + std::min(0.f, et - highEtThres) * lowEtGrad;
+    // }
 
   private:
     std::vector<double> dPhiHighEt_, dPhiHighEtThres_, dPhiLowEtGrad_;
