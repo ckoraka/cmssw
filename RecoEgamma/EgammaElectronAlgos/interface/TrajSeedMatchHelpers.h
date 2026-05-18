@@ -4,16 +4,28 @@
 #include <vector>
 
 namespace egamma {
-  class MatchingCuts {
+  template<size_t nHits>
+  struct MatchingCuts {
+    using array_type = std::array<double, nHits>;
+
   public:
-    explicit MatchingCuts(const edm::ParameterSet& pset) 
-      : dPhiHighEt_(pset.getParameter<std::vector<double> >("dPhiMaxHighEt")),
-        dPhiHighEtThres_(pset.getParameter<std::vector<double> >("dPhiMaxHighEtThres")),
-        dPhiLowEtGrad_(pset.getParameter<std::vector<double> >("dPhiMaxLowEtGrad")),
-        dRZHighEt_(pset.getParameter<std::vector<double> >("dRZMaxHighEt")),
-        dRZHighEtThres_(pset.getParameter<std::vector<double> >("dRZMaxHighEtThres")),
-        dRZLowEtGrad_(pset.getParameter<std::vector<double> >("dRZMaxLowEtGrad")),
-        etaBins_(pset.getParameter<std::vector<double> >("etaBins")) {}
+    explicit MatchingCuts(const array_type& dPhiHighEt,
+                          const array_type& dPhiHighEtThres,
+                          const array_type& dPhiLowEtGrad,
+                          const array_type& dRZHighEt,
+                          const array_type& dRZHighEtThres,
+                          const array_type& dRZLowEtGrad,
+                          const array_type& etaBins,
+                          const uint nEtaBins)
+      : dPhiHighEt_(dPhiHighEt),
+        dPhiHighEtThres_(dPhiHighEtThres),
+        dPhiLowEtGrad_(dPhiLowEtGrad),
+        dRZHighEt_(dRZHighEt),
+        dRZHighEtThres_(dRZHighEtThres),
+        dRZLowEtGrad_(dRZLowEtGrad),
+        etaBins_(etaBins),
+        nEtaBins_(nEtaBins)
+        {}
 
     virtual ~MatchingCuts() {}
     // bool operator()(const SCHitMatch& scHitMatch) const{
@@ -32,21 +44,21 @@ namespace egamma {
   private:
     // size_t getBinNr(float eta) const{
     //   const float absEta = std::abs(eta);
-    //   for (size_t etaNr = 0; etaNr < etaBins_.size(); etaNr++) {
+    //   for (size_t etaNr = 0; etaNr < nEtaBins_; etaNr++) {
     //     if (absEta < etaBins_[etaNr])
     //       return etaNr;
     //   }
-    //   return etaBins_.size();
+    //   return nEtaBins_;
     // }
 
     // float getCutValue(float et, float highEt, float highEtThres, float lowEtGrad) const {
     //   return highEt + std::min(0.f, et - highEtThres) * lowEtGrad;
     // }
 
-  private:
-    std::vector<double> dPhiHighEt_, dPhiHighEtThres_, dPhiLowEtGrad_;
-    std::vector<double> dRZHighEt_, dRZHighEtThres_, dRZLowEtGrad_;
-    std::vector<double> etaBins_;
+    array_type dPhiHighEt_, dPhiHighEtThres_, dPhiLowEtGrad_;
+    array_type dRZHighEt_, dRZHighEtThres_, dRZLowEtGrad_;
+    array_type etaBins_;
+    uint nEtaBins_;
   };
 
   edm::ParameterSetDescription makeMatchingCugsPSetDescription() {
@@ -78,11 +90,67 @@ namespace egamma {
 
 
 namespace {
+  template<size_t nHits>
   auto makeMatchingCuts(std::vector<edm::ParameterSet> const& cutsPSets) {
-    std::vector<std::unique_ptr<egamma::MatchingCuts> > matchingCuts;
+    std::vector<std::unique_ptr<egamma::MatchingCuts<nHits>>> matchingCuts;
 
     for (const auto& cutPSet : cutsPSets) {
-      matchingCuts.emplace_back(std::make_unique<egamma::MatchingCuts>(cutPSet));
+      const auto& dPhiHighEt = cutPSet.getParameter<std::vector<double> >("dPhiMaxHighEt");
+      const auto& dPhiHighEtThres = cutPSet.getParameter<std::vector<double> >("dPhiMaxHighEtThres");
+      const auto& dPhiLowEtGrad = cutPSet.getParameter<std::vector<double> >("dPhiMaxLowEtGrad");
+      const auto& dRZHighEt = cutPSet.getParameter<std::vector<double> >("dRZMaxHighEt");
+      const auto& dRZHighEtThres = cutPSet.getParameter<std::vector<double> >("dRZMaxHighEtThres");
+      const auto& dRZLowEtGrad = cutPSet.getParameter<std::vector<double> >("dRZMaxLowEtGrad");
+      const auto& etaBins = cutPSet.getParameter<std::vector<double> >("etaBins");
+
+      auto binSizeCheck = [](size_t sizeEtaBins, const std::vector<double>& vec, const std::string& name) {
+        if (vec.size() != sizeEtaBins + 1) {
+          throw cms::Exception("InvalidConfig")
+              << " when constructing egamma::MatchingCuts " << name << " has " << vec.size()
+              << " bins, it should be equal to #bins of etaBins+1 " << sizeEtaBins + 1;
+        }
+        if (vec.size() > nHits) {
+          throw cms::Exception("InvalidConfig")
+              << " when constructing egamma::MatchingCuts " << name << " has " << vec.size()
+              << " bins, it should be at maximum nHits" << nHits;
+
+        }
+      };
+      binSizeCheck(etaBins.size(), dPhiHighEt, "dPhiMaxHighEt");
+      binSizeCheck(etaBins.size(), dPhiHighEtThres, "dPhiMaxHighEtThres");
+      binSizeCheck(etaBins.size(), dPhiLowEtGrad, "dPhiMaxLowEtGrad");
+      binSizeCheck(etaBins.size(), dRZHighEt, "dRZMaxHighEt");
+      binSizeCheck(etaBins.size(), dRZHighEtThres, "dRZMaxHighEtThres");
+      binSizeCheck(etaBins.size(), dRZLowEtGrad, "dRZMaxLowEtGrad");
+
+      using array_type = std::array<double, nHits>;
+      array_type adPhiHighEt; adPhiHighEt.fill(0);
+      array_type adPhiHighEtThres; adPhiHighEtThres.fill(0);
+      array_type adPhiLowEtGrad; adPhiLowEtGrad.fill(0);
+      array_type adRZHighEt; adRZHighEt.fill(0);
+      array_type adRZHighEtThres; adRZHighEtThres.fill(0);
+      array_type adRZLowEtGrad; adRZLowEtGrad.fill(0);
+      array_type aetaBins; aetaBins.fill(0);
+
+      for (uint bin = 0; bin < etaBins.size(); bin++) {
+        aetaBins[bin] = etaBins[bin];
+      }
+
+      for (uint bin = 0; bin <= etaBins.size(); bin++) {
+        adPhiHighEt[bin]      = dPhiHighEt[bin];
+        adPhiHighEtThres[bin] = dPhiHighEtThres[bin];
+        adPhiLowEtGrad[bin]   = dPhiLowEtGrad[bin];
+        adRZHighEt[bin]       = dRZHighEt[bin];
+        adRZHighEtThres[bin]  = dRZHighEtThres[bin];
+        adRZLowEtGrad[bin]    = dRZLowEtGrad[bin];
+      }
+
+      matchingCuts.emplace_back(std::make_unique<egamma::MatchingCuts<nHits>>(
+        adPhiHighEt, adPhiHighEtThres, adPhiLowEtGrad,
+        adRZHighEt, adRZHighEtThres, adRZLowEtGrad,
+        aetaBins,
+        etaBins.size()
+      ));
     }
 
     return matchingCuts;
