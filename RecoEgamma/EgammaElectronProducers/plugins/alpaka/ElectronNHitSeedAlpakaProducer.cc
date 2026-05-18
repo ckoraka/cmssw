@@ -161,7 +161,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<edm::InputTag>("initialSeeds", {"hltElePixelSeedsCombined"});
       desc.add<edm::InputTag>("beamSpot", {"hltOnlineBeamSpot"});
       desc.add<edm::InputTag>("superClusters", {"hltEgammaSuperClustersToPixelMatch"});
-      desc.add<edm::ParameterSetDescription>("matchingCuts", egamma::MatchingCuts::makePSetDescription());
+      desc.add<edm::ParameterSetDescription>("matchingCuts", egamma::makeMatchingCugsPSetDescription());
       descriptions.addWithDefaultLabel(desc);
     }
 
