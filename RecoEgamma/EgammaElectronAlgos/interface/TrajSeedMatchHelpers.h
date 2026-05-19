@@ -1,7 +1,12 @@
+#ifndef RecoEgamma_EgammaElectronAlgos_TrajSeedMatchHelpers_h
+#define RecoEgamma_EgammaElectronAlgos_TrajSeedMatchHelpers_h
+
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
+#include "FWCore/Utilities/interface/Exception.h"
 
 #include <vector>
+#include <array>
 
 namespace egamma {
   template<size_t nMaxEtaBins>
@@ -129,3 +134,5 @@ namespace {
     return matchingCuts;
   }
 }
+
+#endif
