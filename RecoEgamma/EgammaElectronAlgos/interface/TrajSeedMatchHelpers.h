@@ -27,7 +27,6 @@ namespace egamma {
         nEtaBins_(nEtaBins)
         {}
 
-    virtual ~MatchingCuts() {}
     // bool operator()(const SCHitMatch& scHitMatch) const{
     //   size_t binNr = getBinNr(scHitMatch.eta);
     //   float dPhiMax = getCutValue(scHitMatch.et, dPhiHighEt_[binNr], dPhiHighEtThres_[binNr], dPhiLowEtGrad_[binNr]);
