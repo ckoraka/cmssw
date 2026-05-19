@@ -38,7 +38,7 @@ namespace egamma {
     uint nEtaBins_;
   };
 
-  edm::ParameterSetDescription makeMatchingCugsPSetDescription() {
+  inline edm::ParameterSetDescription makeMatchingCugsPSetDescription() {
     edm::ParameterSetDescription desc;
 
     edm::ParameterSetDescription cutsDesc;
