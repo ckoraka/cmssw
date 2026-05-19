@@ -27,16 +27,6 @@ namespace egamma {
         nEtaBins_(nEtaBins)
         {}
 
-  private:
-    // size_t getBinNr(float eta) const{
-    //   const float absEta = std::abs(eta);
-    //   for (size_t etaNr = 0; etaNr < nEtaBins_; etaNr++) {
-    //     if (absEta < etaBins_[etaNr])
-    //       return etaNr;
-    //   }
-    //   return nEtaBins_;
-    // }
-
     array_type dPhiHighEt_, dPhiHighEtThres_, dPhiLowEtGrad_;
     array_type dRZHighEt_, dRZHighEtThres_, dRZLowEtGrad_;
     array_type etaBins_;

@@ -17,6 +17,8 @@
 #include "RecoEgamma/EgammaElectronAlgos/interface/EleRelPointPairPortable.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/Plane.h"
 
+#include <array>
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   using namespace cms::alpakatools;
@@ -38,6 +40,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE T
   getCutValue(TAcc const& acc, const T et, const T highEt, const T highEtThres, const T lowEtGrad) {
     return highEt + alpaka::math::min(acc, static_cast<T>(0.), et - highEtThres) * lowEtGrad;
+  }
+
+  template <typename TAcc, typename T, size_t nEtaBins>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE T
+  getBinNr(TAcc const& acc, const T eta, const std::array<T, nEtaBins> etaBins) {
+    const T absEta = alpaka::math::abs(acc, eta);
+    for (size_t etaNr = 0; etaNr < nEtaBins; etaNr++) {
+      if (absEta < etaBins[etaNr]) {
+        return etaNr;
+      }
+    }
+    return nEtaBins;
   }
 
   //--- Kernel for printing the SC SoA
