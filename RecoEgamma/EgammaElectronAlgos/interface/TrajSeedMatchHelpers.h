@@ -67,11 +67,18 @@ namespace egamma {
 
 
 namespace {
-  template<size_t nMaxEtaBins>
+  template<size_t nMaxEtaBins, size_t nMaxHits>
   auto makeMatchingCuts(std::vector<edm::ParameterSet> const& cutsPSets) {
-    std::vector<std::unique_ptr<egamma::MatchingCuts<nMaxEtaBins>>> matchingCuts;
+    std::array<std::unique_ptr<egamma::MatchingCuts<nMaxEtaBins>>, nMaxHits> matchingCuts;
 
-    for (const auto& cutPSet : cutsPSets) {
+    if (cutsPSets.size() != nMaxHits) {
+      throw cms::Exception("InvalidConfig")
+          << " when constructing egamma::MatchingCuts " << cutsPSets.size() << " ParameterSets were provided, "
+          << "but only nMaxHits " << nMaxHits << "are expected.";
+    }
+
+    for (size_t nHit = 0; nHit < nMaxHits; nHit++) {
+      const auto& cutPSet = cutsPSets[nHit];
       const auto& vdPhiHighEt = cutPSet.getParameter<std::vector<double> >("dPhiMaxHighEt");
       const auto& vdPhiHighEtThres = cutPSet.getParameter<std::vector<double> >("dPhiMaxHighEtThres");
       const auto& vdPhiLowEtGrad = cutPSet.getParameter<std::vector<double> >("dPhiMaxLowEtGrad");
@@ -123,12 +130,12 @@ namespace {
         dRZLowEtGrad[bin]    = vdRZLowEtGrad[bin];
       }
 
-      matchingCuts.emplace_back(std::make_unique<egamma::MatchingCuts<nMaxEtaBins>>(
+      matchingCuts[nHit] = std::make_unique<egamma::MatchingCuts<nMaxEtaBins>>(
         dPhiHighEt, dPhiHighEtThres, dPhiLowEtGrad,
         dRZHighEt, dRZHighEtThres, dRZLowEtGrad,
         etaBins,
         nvetaBins
-      ));
+      );
     }
 
     return matchingCuts;
