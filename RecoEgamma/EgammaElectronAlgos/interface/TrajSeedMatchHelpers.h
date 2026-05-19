@@ -27,19 +27,6 @@ namespace egamma {
         nEtaBins_(nEtaBins)
         {}
 
-    // bool operator()(const SCHitMatch& scHitMatch) const{
-    //   size_t binNr = getBinNr(scHitMatch.eta);
-    //   float dPhiMax = getCutValue(scHitMatch.et, dPhiHighEt_[binNr], dPhiHighEtThres_[binNr], dPhiLowEtGrad_[binNr]);
-    //   if (dPhiMax >= 0 && std::abs(scHitMatch.dPhi) > dPhiMax) {
-    //     return false;
-    //   }
-    //   float dRZMax = getCutValue(scHitMatch.et, dRZHighEt_[binNr], dRZHighEtThres_[binNr], dRZLowEtGrad_[binNr]);
-    //   if (dRZMax >= 0 && std::abs(scHitMatch.dRZ) > dRZMax) {
-    //     return false;
-    //   }
-    //   return true;
-    // };
-
   private:
     // size_t getBinNr(float eta) const{
     //   const float absEta = std::abs(eta);
@@ -48,10 +35,6 @@ namespace egamma {
     //       return etaNr;
     //   }
     //   return nEtaBins_;
-    // }
-
-    // float getCutValue(float et, float highEt, float highEtThres, float lowEtGrad) const {
-    //   return highEt + std::min(0.f, et - highEtThres) * lowEtGrad;
     // }
 
     array_type dPhiHighEt_, dPhiHighEtThres_, dPhiLowEtGrad_;
