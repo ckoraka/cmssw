@@ -95,13 +95,13 @@ namespace {
     std::vector<std::unique_ptr<egamma::MatchingCuts<nMaxEtaBins>>> matchingCuts;
 
     for (const auto& cutPSet : cutsPSets) {
-      const auto& dPhiHighEt = cutPSet.getParameter<std::vector<double> >("dPhiMaxHighEt");
-      const auto& dPhiHighEtThres = cutPSet.getParameter<std::vector<double> >("dPhiMaxHighEtThres");
-      const auto& dPhiLowEtGrad = cutPSet.getParameter<std::vector<double> >("dPhiMaxLowEtGrad");
-      const auto& dRZHighEt = cutPSet.getParameter<std::vector<double> >("dRZMaxHighEt");
-      const auto& dRZHighEtThres = cutPSet.getParameter<std::vector<double> >("dRZMaxHighEtThres");
-      const auto& dRZLowEtGrad = cutPSet.getParameter<std::vector<double> >("dRZMaxLowEtGrad");
-      const auto& etaBins = cutPSet.getParameter<std::vector<double> >("etaBins");
+      const auto& vdPhiHighEt = cutPSet.getParameter<std::vector<double> >("dPhiMaxHighEt");
+      const auto& vdPhiHighEtThres = cutPSet.getParameter<std::vector<double> >("dPhiMaxHighEtThres");
+      const auto& vdPhiLowEtGrad = cutPSet.getParameter<std::vector<double> >("dPhiMaxLowEtGrad");
+      const auto& vdRZHighEt = cutPSet.getParameter<std::vector<double> >("dRZMaxHighEt");
+      const auto& vdRZHighEtThres = cutPSet.getParameter<std::vector<double> >("dRZMaxHighEtThres");
+      const auto& vdRZLowEtGrad = cutPSet.getParameter<std::vector<double> >("dRZMaxLowEtGrad");
+      const auto& vetaBins = cutPSet.getParameter<std::vector<double> >("etaBins");
 
       auto binSizeCheck = [](size_t sizeEtaBins, const std::vector<double>& vec, const std::string& name) {
         if (vec.size() != sizeEtaBins + 1) {
@@ -116,40 +116,41 @@ namespace {
 
         }
       };
-      binSizeCheck(etaBins.size(), dPhiHighEt, "dPhiMaxHighEt");
-      binSizeCheck(etaBins.size(), dPhiHighEtThres, "dPhiMaxHighEtThres");
-      binSizeCheck(etaBins.size(), dPhiLowEtGrad, "dPhiMaxLowEtGrad");
-      binSizeCheck(etaBins.size(), dRZHighEt, "dRZMaxHighEt");
-      binSizeCheck(etaBins.size(), dRZHighEtThres, "dRZMaxHighEtThres");
-      binSizeCheck(etaBins.size(), dRZLowEtGrad, "dRZMaxLowEtGrad");
+      const auto nvetaBins = vetaBins.size();
+      binSizeCheck(nvetaBins, vdPhiHighEt, "dPhiMaxHighEt");
+      binSizeCheck(nvetaBins, vdPhiHighEtThres, "dPhiMaxHighEtThres");
+      binSizeCheck(nvetaBins, vdPhiLowEtGrad, "dPhiMaxLowEtGrad");
+      binSizeCheck(nvetaBins, vdRZHighEt, "dRZMaxHighEt");
+      binSizeCheck(nvetaBins, vdRZHighEtThres, "dRZMaxHighEtThres");
+      binSizeCheck(nvetaBins, vdRZLowEtGrad, "dRZMaxLowEtGrad");
 
       using array_type = std::array<double, nMaxEtaBins>;
-      array_type adPhiHighEt; adPhiHighEt.fill(0);
-      array_type adPhiHighEtThres; adPhiHighEtThres.fill(0);
-      array_type adPhiLowEtGrad; adPhiLowEtGrad.fill(0);
-      array_type adRZHighEt; adRZHighEt.fill(0);
-      array_type adRZHighEtThres; adRZHighEtThres.fill(0);
-      array_type adRZLowEtGrad; adRZLowEtGrad.fill(0);
-      array_type aetaBins; aetaBins.fill(0);
+      array_type dPhiHighEt;      dPhiHighEt.fill(0);
+      array_type dPhiHighEtThres; dPhiHighEtThres.fill(0);
+      array_type dPhiLowEtGrad;   dPhiLowEtGrad.fill(0);
+      array_type dRZHighEt;       dRZHighEt.fill(0);
+      array_type dRZHighEtThres;  dRZHighEtThres.fill(0);
+      array_type dRZLowEtGrad;    dRZLowEtGrad.fill(0);
+      array_type etaBins;         etaBins.fill(0);
 
-      for (uint bin = 0; bin < etaBins.size(); bin++) {
-        aetaBins[bin] = etaBins[bin];
+      for (uint bin = 0; bin < nvetaBins; bin++) {
+        etaBins[bin] = vetaBins[bin];
       }
 
-      for (uint bin = 0; bin <= etaBins.size(); bin++) {
-        adPhiHighEt[bin]      = dPhiHighEt[bin];
-        adPhiHighEtThres[bin] = dPhiHighEtThres[bin];
-        adPhiLowEtGrad[bin]   = dPhiLowEtGrad[bin];
-        adRZHighEt[bin]       = dRZHighEt[bin];
-        adRZHighEtThres[bin]  = dRZHighEtThres[bin];
-        adRZLowEtGrad[bin]    = dRZLowEtGrad[bin];
+      for (uint bin = 0; bin <= nvetaBins; bin++) {
+        dPhiHighEt[bin]      = vdPhiHighEt[bin];
+        dPhiHighEtThres[bin] = vdPhiHighEtThres[bin];
+        dPhiLowEtGrad[bin]   = vdPhiLowEtGrad[bin];
+        dRZHighEt[bin]       = vdRZHighEt[bin];
+        dRZHighEtThres[bin]  = vdRZHighEtThres[bin];
+        dRZLowEtGrad[bin]    = vdRZLowEtGrad[bin];
       }
 
       matchingCuts.emplace_back(std::make_unique<egamma::MatchingCuts<nMaxEtaBins>>(
-        adPhiHighEt, adPhiHighEtThres, adPhiLowEtGrad,
-        adRZHighEt, adRZHighEtThres, adRZLowEtGrad,
-        aetaBins,
-        etaBins.size()
+        dPhiHighEt, dPhiHighEtThres, dPhiLowEtGrad,
+        dRZHighEt, dRZHighEtThres, dRZLowEtGrad,
+        etaBins,
+        nvetaBins
       ));
     }
 
