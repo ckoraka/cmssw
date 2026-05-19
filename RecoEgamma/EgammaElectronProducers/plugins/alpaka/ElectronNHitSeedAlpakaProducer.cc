@@ -55,7 +55,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           initialSeedsToken_(consumes(pset.getParameter<edm::InputTag>("initialSeeds"))),
           beamSpotToken_(consumes(pset.getParameter<edm::InputTag>("beamSpot"))),
           superClustersTokens_(consumes(pset.getParameter<edm::InputTag>("superClusters"))),
-          matchingCuts_{makeMatchingCuts<nHitsInMatchingCuts>(pset.getParameter<std::vector<edm::ParameterSet> >("matchingCuts"))}
+          matchingCuts_{makeMatchingCuts<nMaxEtaBins>(pset.getParameter<std::vector<edm::ParameterSet> >("matchingCuts"))}
     {}
 
     void produce(edm::StreamID sid, device::Event& event, device::EventSetup const& iSetup) const override {
@@ -166,13 +166,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
   private:
-    static constexpr size_t nHitsInMatchingCuts = 1;
+    static constexpr size_t nMaxEtaBins = 1;
     const device::EDPutToken<reco::ElectronSeedDeviceCollection> deviceToken_;
     const edm::EDGetTokenT<TrajectorySeedCollection> initialSeedsToken_;
     const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
     const edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
     PixelMatchingAlgo const algo_{};
-    const std::vector<std::unique_ptr<egamma::MatchingCuts<nHitsInMatchingCuts>> > matchingCuts_;
+    const std::vector<std::unique_ptr<egamma::MatchingCuts<nMaxEtaBins>> > matchingCuts_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
