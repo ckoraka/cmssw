@@ -40,6 +40,7 @@
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/global/EDProducer.h"
 
 #include "RecoEgamma/EgammaElectronAlgos/interface/TrajSeedMatchHelpers.h"
+#include "RecoEgamma/EgammaElectronAlgos/interface/TrajSeedMatchingCutsPortable.h"
 
 #include "PixelMatchingAlgo.h"
 
