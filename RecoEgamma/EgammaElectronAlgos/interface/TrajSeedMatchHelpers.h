@@ -42,7 +42,7 @@ namespace egamma {
 namespace {
   template<size_t nMaxEtaBins, size_t nMaxHits>
   auto makeMatchingCuts(std::vector<edm::ParameterSet> const& cutsPSets) {
-    std::array<std::unique_ptr<egamma::MatchingCuts<nMaxEtaBins>>, nMaxHits> matchingCuts;
+    std::array<egamma::MatchingCuts<nMaxEtaBins>, nMaxHits> matchingCuts;
 
     if (cutsPSets.size() != nMaxHits) {
       throw cms::Exception("InvalidConfig")
@@ -97,7 +97,7 @@ namespace {
         cuts.dRZLowEtGrad_[bin]    = vdRZLowEtGrad[bin];
       }
 
-      matchingCuts[nHit] = std::make_unique<egamma::MatchingCuts<nMaxEtaBins>>(cuts);
+      matchingCuts[nHit] = cuts;
     }
 
     return matchingCuts;

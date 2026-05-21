@@ -174,7 +174,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
     const edm::EDGetTokenT<std::vector<reco::SuperClusterRef>> superClustersTokens_;
     PixelMatchingAlgo const algo_{};
-    const std::array<std::unique_ptr<egamma::MatchingCuts<nMaxEtaBins>>, nMaxHits> matchingCuts_;
+    const std::array<egamma::MatchingCuts<nMaxEtaBins>, nMaxHits> matchingCuts_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
