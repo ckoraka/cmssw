@@ -11,7 +11,7 @@
 
 namespace egamma {
 
-  inline edm::ParameterSetDescription makeMatchingCugsPSetDescription() {
+  inline edm::ParameterSetDescription makeMatchingCutsPSetDescription() {
     edm::ParameterSetDescription desc;
 
     edm::ParameterSetDescription cutsDesc;
