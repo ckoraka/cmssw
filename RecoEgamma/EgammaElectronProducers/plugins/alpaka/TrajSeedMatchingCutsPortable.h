@@ -1,5 +1,5 @@
-#ifndef RecoEgamma_EgammaElectronAlgos_TrajSeedMatchingCutsPortable_h
-#define RecoEgamma_EgammaElectronAlgos_TrajSeedMatchingCutsPortable_h
+#ifndef RecoEgamma_EgammaElectronProducers_plugins_alpaka_TrajSeedMatchingCutsPortable_h
+#define RecoEgamma_EgammaElectronProducers_plugins_alpaka_TrajSeedMatchingCutsPortable_h
 
 #include <array>
 

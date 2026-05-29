@@ -16,7 +16,7 @@
 #include "PixelMatchingAlgo.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/EleRelPointPairPortable.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/Plane.h"
-#include "RecoEgamma/EgammaElectronAlgos/interface/TrajSeedMatchingCutsPortable.h"
+#include "RecoEgamma/EgammaElectronProducers/plugins/alpaka/TrajSeedMatchingCutsPortable.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
