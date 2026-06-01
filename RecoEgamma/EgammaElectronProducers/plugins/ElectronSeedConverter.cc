@@ -145,8 +145,9 @@ void ElectronSeedConverter::produce(edm::StreamID,
     if (view[i].isMatched() == 0)
       continue;
 
-    const int matchedScID = view[i].matchedScID();
-    const int seedID = view[i].id();
+    const auto currentView = view[i];
+    const int matchedScID = currentView.matchedScID();
+    const int seedID = currentView.id();
 
     if (matchedScID < 0 || (unsigned)matchedScID >= superClusterRefs.size() ||
         seedID < 0 || (unsigned)seedID >= initialSeeds.size()) {
@@ -177,6 +178,18 @@ void ElectronSeedConverter::produce(edm::StreamID,
 
     reco::ElectronSeed eleSeed(matchedSeed);
     eleSeed.setCaloCluster(reco::ElectronSeed::CaloClusterRef(scRef));
+
+    const auto makePMVars = [currentView](const ushort nHit) -> reco::ElectronSeed::PMVars {
+      reco::ElectronSeed::PMVars pmVars;
+      pmVars.setDPhi(currentView.PMVars_dPhiPos()[nHit], currentView.PMVars_dPhiNeg()[nHit]);
+      pmVars.setDRZ(currentView.PMVars_dRZPos()[nHit], currentView.PMVars_dRZNeg()[nHit]);
+      return pmVars;
+    };
+
+    for (uint nHit = 0; nHit < matchedSeed.nHits(); nHit++) {
+      eleSeed.addHitInfo(makePMVars(nHit));
+    }
+
     eleSeeds.emplace_back(eleSeed);
   }
 
