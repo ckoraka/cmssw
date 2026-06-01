@@ -9,6 +9,7 @@
 namespace reco {
 
   using Vector3d = Eigen::Matrix<double, 3, 1>;
+  using Vector3f = Eigen::Matrix<float, 3, 1>;
 
   GENERATE_SOA_LAYOUT(ElectronSeedLayout,
                       SOA_COLUMN(int8_t, nHits),
@@ -29,7 +30,11 @@ namespace reco {
                       SOA_EIGEN_COLUMN(Vector3d, surf1Rot),
                       SOA_EIGEN_COLUMN(Vector3d, hit2Pos),
                       SOA_EIGEN_COLUMN(Vector3d, surf2Pos),
-                      SOA_EIGEN_COLUMN(Vector3d, surf2Rot))
+                      SOA_EIGEN_COLUMN(Vector3d, surf2Rot),
+                      SOA_EIGEN_COLUMN(Vector3f, PMVars_dRZPos),
+                      SOA_EIGEN_COLUMN(Vector3f, PMVars_dRZNeg),
+                      SOA_EIGEN_COLUMN(Vector3f, PMVars_dPhiPos),
+                      SOA_EIGEN_COLUMN(Vector3f, PMVars_dPhiNeg))
   using ElectronSeedSoA = ElectronSeedLayout<>;
 }  // namespace reco
 
