@@ -197,10 +197,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             const float dPhiMax = getCutValue(acc, et, 0.05f, 20.f, -0.002f);
             const float dRZMax = getCutValue(acc, et, 9999.f, 0.f, 0.f);
             const float dRZ = eleSeed.hit0detectorID() != 1 ? pair.dPerp(acc) : pair.dZ();
+            const float dPhi = pair.dPhi(acc);
 
-            if ((dPhiMax >= 0 && alpaka::math::abs(acc, pair.dPhi(acc)) > dPhiMax) ||
+            if ((dPhiMax >= 0 && alpaka::math::abs(acc, dPhi) > dPhiMax) ||
                 (dRZMax >= 0 && alpaka::math::abs(acc, dRZ) > dRZMax))
               continue;
+            
 
             const double zVertex =
                 getZVtxFromExtrapolation<TAcc, typename Vec3d::value_type>(acc, vertex, hitPosition, positionSC);
@@ -242,11 +244,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             const float dPhiMax2 = getCutValue(acc, et, 0.003f, 0.f, 0.f);
             const float dRZMax2 = getCutValue(acc, et, 0.05f, 30.f, -0.002f);
             const float dRZ2 = eleSeed.hit1detectorID() != 1 ? pair2.dPerp(acc) : pair2.dZ();
+            const float dPhi2 = pair2.dPhi(acc);
 
-            if ((dPhiMax2 >= 0 && alpaka::math::abs(acc, pair2.dPhi(acc)) > dPhiMax2) ||
+            if ((dPhiMax2 >= 0 && alpaka::math::abs(acc, dPhi2) > dPhiMax2) ||
                 (dRZMax2 >= 0 && alpaka::math::abs(acc, dRZ2) > dRZMax2))
               continue;
 
+            float dRZ3 = 0;
+            float dPhi3 = 0;
             // --- Third hit (triplet seeds only) ---
             if (eleSeed.nHits() > 2 && eleSeed.hit2isValid()) {
               Vec3d hit3Position(eleSeed.hit2Pos().x(), eleSeed.hit2Pos().y(), eleSeed.hit2Pos().z());
@@ -275,15 +280,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
               const float dPhiMax3 = getCutValue(acc, et, 0.003f, 0.f, 0.f);
               const float dRZMax3 = getCutValue(acc, et, 0.05f, 30.f, -0.002f);
-              const float dRZ3 = eleSeed.hit2detectorID() != 1 ? pair3.dPerp(acc) : pair3.dZ();
+              dRZ3 = eleSeed.hit2detectorID() != 1 ? pair3.dPerp(acc) : pair3.dZ();
+              dPhi3 = pair3.dPhi(acc);
 
-              if ((dPhiMax3 >= 0 && alpaka::math::abs(acc, pair3.dPhi(acc)) > dPhiMax3) ||
+              if ((dPhiMax3 >= 0 && alpaka::math::abs(acc, dPhi3) > dPhiMax3) ||
                   (dRZMax3 >= 0 && alpaka::math::abs(acc, dRZ3) > dRZMax3))
                 continue;
             }
 
             eleSeed.matchedScID() = static_cast<int16_t>(viewSCs[j].id());
             eleSeed.isMatched() = static_cast<int16_t>(1);
+
+            using EVector3f = Eigen::Matrix<float, 3, 1>;
+            if (charge == 1) {
+              eleSeed.PMVars_dRZPos() = EVector3f(dRZ, dRZ2, dRZ3);
+              eleSeed.PMVars_dPhiPos() = EVector3f(dPhi, dPhi2, dPhi3);
+            } else {
+              eleSeed.PMVars_dRZNeg() = EVector3f(dRZ, dRZ2, dRZ3);
+              eleSeed.PMVars_dPhiNeg() = EVector3f(dPhi, dPhi2, dPhi3);
+            }
           }
         }
       }
