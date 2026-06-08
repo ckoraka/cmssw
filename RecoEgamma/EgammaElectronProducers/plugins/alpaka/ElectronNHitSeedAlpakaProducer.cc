@@ -61,7 +61,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       const std::vector<reco::SuperClusterRef>& superClusterRefVec = event.get(superClustersTokens_);
       int32_t superClusterCollectionSize = superClusterRefVec.size();
-      reco::SuperClusterHostCollection hostProductSCs{event.queue(),superClusterCollectionSize};
+      reco::SuperClusterHostCollection hostProductSCs{event.queue(), superClusterCollectionSize};
 
       const std::vector<TrajectorySeed>& seedVec = event.get(initialSeedsToken_);
       int32_t seedCollectionSize = seedVec.size();

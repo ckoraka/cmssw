@@ -62,7 +62,6 @@ namespace propagators {
       bool valid = false;
 
       if constexpr (propDir == PropagationDirection::anyDirection) {
-
         valid = true;
         path = (alpaka::math::abs(acc, dS1) < alpaka::math::abs(acc, dS2)) ? dS1 : dS2;
       } else {

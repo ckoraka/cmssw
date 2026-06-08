@@ -107,9 +107,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
   };
 
-  constexpr bool kUseMidpointBField = false; // use B@SC hit0 midpoint for backward SC->hit0 propagation 
-  constexpr bool kUseHitBField = true;  // use B@hit0 for backward SC->hit0 propagation - this works without changing the validity range of the parabolic parametrized magnetic field
-  
+  constexpr bool kUseMidpointBField = false;  // use B@SC hit0 midpoint for backward SC->hit0 propagation
+  constexpr bool kUseHitBField =
+      true;  // use B@hit0 for backward SC->hit0 propagation - this works without changing the validity range of the parabolic parametrized magnetic field
 
   class SeedToSuperClusterMatcher {
   public:
@@ -154,18 +154,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           for (int charge : {1, -1}) {
             const float c = (charge == 1 ? -2.99792458e-3f : +2.99792458e-3f);
 
-            const float bFieldFirst =
-                kUseHitBField
-                    ? portableParabolicMagneticField::magneticFieldAtPoint(hitPosition)
-                    : kUseMidpointBField
-                          ? portableParabolicMagneticField::magneticFieldAtPoint(
-                                Vec3d(0.5 * (positionSC[0] + surfPosition[0]),
-                                      0.5 * (positionSC[1] + surfPosition[1]),
-                                      0.5 * (positionSC[2] + surfPosition[2])))
-                          : portableParabolicMagneticField::magneticFieldAtPoint(positionSC);
+            const float bFieldFirst = kUseHitBField ? portableParabolicMagneticField::magneticFieldAtPoint(hitPosition)
+                                      : kUseMidpointBField
+                                          ? portableParabolicMagneticField::magneticFieldAtPoint(
+                                                Vec3d(0.5 * (positionSC[0] + surfPosition[0]),
+                                                      0.5 * (positionSC[1] + surfPosition[1]),
+                                                      0.5 * (positionSC[2] + surfPosition[2])))
+                                          : portableParabolicMagneticField::magneticFieldAtPoint(positionSC);
 
-            auto newfreeTS =
-                egamma::ftsFromVertexToPoint(acc, positionSC, vertex, e, charge, bFieldFirst);
+            auto newfreeTS = egamma::ftsFromVertexToPoint(acc, positionSC, vertex, e, charge, bFieldFirst);
 
             const Vec3d position(newfreeTS.get_position());
             const Vec3d momentum(newfreeTS.get_momentum());
@@ -182,7 +179,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             egamma::Plane<typename Vec3d::value_type> plane(surfPosition, surfRotation);
             if (eleSeed.hit0detectorID() == 1) {
               propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
-                  acc, position, momentum, rho, surfPosition, surfRotation, theSolExists, propagatedPos, propagatedMom, s);
+                  acc,
+                  position,
+                  momentum,
+                  rho,
+                  surfPosition,
+                  surfRotation,
+                  theSolExists,
+                  propagatedPos,
+                  propagatedMom,
+                  s);
             } else {
               propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
                   acc, position, momentum, rho, plane, s, propagatedPos, propagatedMom, theSolExists);
@@ -203,7 +209,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             if ((dPhiMax >= 0 && alpaka::math::abs(acc, dPhi) > dPhiMax) ||
                 (dRZMax >= 0 && alpaka::math::abs(acc, dRZ) > dRZMax))
               continue;
-            
 
             const double zVertex =
                 getZVtxFromExtrapolation<TAcc, typename Vec3d::value_type>(acc, vertex, hitPosition, positionSC);
@@ -228,7 +233,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             egamma::Plane<typename Vec3d::value_type> plane2(surf2Position, surf2Rotation);
             if (eleSeed.hit1detectorID() == 1) {
               propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
-                  acc, position2, momentum2, rho, surf2Position, surf2Rotation, theSolExists, propagatedPos, propagatedMom, s);
+                  acc,
+                  position2,
+                  momentum2,
+                  rho,
+                  surf2Position,
+                  surf2Rotation,
+                  theSolExists,
+                  propagatedPos,
+                  propagatedMom,
+                  s);
             } else {
               propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                   acc, position2, momentum2, rho, plane2, s, propagatedPos, propagatedMom, theSolExists);
@@ -266,8 +280,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               egamma::Plane<typename Vec3d::value_type> plane3(surf3Position, surf3Rotation);
               if (eleSeed.hit2detectorID() == 1) {
                 propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
-                    acc, position2, momentum2, rho, surf3Position, surf3Rotation,
-                    thirdSolExists, propagatedPos3, propagatedMom3, s3);
+                    acc,
+                    position2,
+                    momentum2,
+                    rho,
+                    surf3Position,
+                    surf3Rotation,
+                    thirdSolExists,
+                    propagatedPos3,
+                    propagatedMom3,
+                    s3);
               } else {
                 propagators::helixForwardPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                     acc, position2, momentum2, rho, plane3, s3, propagatedPos3, propagatedMom3, thirdSolExists);

@@ -120,9 +120,7 @@ ElectronSeedConverter::ElectronSeedConverter(const edm::ParameterSet &pset)
 
 // -----------------------------------------------------------------------------
 
-void ElectronSeedConverter::produce(edm::StreamID,
-                                    edm::Event &event,
-                                    const edm::EventSetup &iSetup) const {
+void ElectronSeedConverter::produce(edm::StreamID, edm::Event &event, const edm::EventSetup &iSetup) const {
   auto const &view = event.get(matchedEleSeedSoAToken_).const_view();
   auto const &superClusterRefs = event.get(superClustersToken_);
   auto const &initialSeeds = event.get(initialSeedsToken_);
@@ -149,11 +147,9 @@ void ElectronSeedConverter::produce(edm::StreamID,
     const int matchedScID = currentView.matchedScID();
     const int seedID = currentView.id();
 
-    if (matchedScID < 0 || (unsigned)matchedScID >= superClusterRefs.size() ||
-        seedID < 0 || (unsigned)seedID >= initialSeeds.size()) {
-      edm::LogWarning("ElectronSeedConverter")
-          << "Index out of bounds: SC=" << matchedScID
-          << " Seed=" << seedID;
+    if (matchedScID < 0 || (unsigned)matchedScID >= superClusterRefs.size() || seedID < 0 ||
+        (unsigned)seedID >= initialSeeds.size()) {
+      edm::LogWarning("ElectronSeedConverter") << "Index out of bounds: SC=" << matchedScID << " Seed=" << seedID;
       continue;
     }
 
@@ -164,9 +160,14 @@ void ElectronSeedConverter::produce(edm::StreamID,
     // --- Doublet rejection ---
     if (matchedSeed.nHits() == 2) {
       ++nDoublets;
-      const int nrValidLayers = getNrValidLayersAlongTraj(matchedSeed, scRef, beamSpot,
-                                                          forwardPropagator, backwardPropagator,
-                                                          navSchool, detLayerGeom, measTkEvt,
+      const int nrValidLayers = getNrValidLayersAlongTraj(matchedSeed,
+                                                          scRef,
+                                                          beamSpot,
+                                                          forwardPropagator,
+                                                          backwardPropagator,
+                                                          navSchool,
+                                                          detLayerGeom,
+                                                          measTkEvt,
                                                           magField);
       if (nrValidLayers >= kDoubletRejectionValidLayerThreshold) {
         ++nDoubletsRejected;
@@ -194,13 +195,11 @@ void ElectronSeedConverter::produce(edm::StreamID,
   }
 
   // Print per-event doublet rejection summary
-  edm::LogPrint("ElectronSeedConverter")
-      << "[ElectronSeedConverter] matched=" << nMatched
-      << "  doublets=" << nDoublets
-      << "  doublets_rejected=" << nDoubletsRejected
-      << "  (frac=" << (nDoublets > 0 ? 100.f * nDoubletsRejected / nDoublets : 0.f) << "%)"
-      << "  triplets=" << nTriplets
-      << "  accepted=" << (int)eleSeeds.size();
+  edm::LogPrint("ElectronSeedConverter") << "[ElectronSeedConverter] matched=" << nMatched << "  doublets=" << nDoublets
+                                         << "  doublets_rejected=" << nDoubletsRejected
+                                         << "  (frac=" << (nDoublets > 0 ? 100.f * nDoubletsRejected / nDoublets : 0.f)
+                                         << "%)"
+                                         << "  triplets=" << nTriplets << "  accepted=" << (int)eleSeeds.size();
 
   event.emplace(putToken_, std::move(eleSeeds));
 }
@@ -229,15 +228,13 @@ int ElectronSeedConverter::getNrValidLayersAlongTraj(const TrajectorySeed &seed,
   const GlobalPoint candPos(scRef->position().x(), scRef->position().y(), scRef->position().z());
   const float energy = scRef->energy();
 
-  const double zVertex =
-      getZVtxFromExtrapolation(vprim, recHit1.globalPosition(), candPos);
+  const double zVertex = getZVtxFromExtrapolation(vprim, recHit1.globalPosition(), candPos);
   const GlobalPoint vertex(vprim.x(), vprim.y(), zVertex);
 
   auto countLayersForCharge = [&](int charge) -> int {
     auto fts = ftsFromVertexToPoint(recHit1.globalPosition(), vertex, energy, charge, magField);
 
-    const TrajectoryStateOnSurface secondHitTS =
-        forwardPropagator.propagate(fts, recHit2.det()->surface());
+    const TrajectoryStateOnSurface secondHitTS = forwardPropagator.propagate(fts, recHit2.det()->surface());
     if (!secondHitTS.isValid())
       return 0;
 
