@@ -24,10 +24,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   template <typename TAcc, typename T>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE T
-  getZVtxFromExtrapolation(TAcc const& acc, const Vec3d& primeVtxPos, const Vec3d& hitPos, const Vec3d& candPos) {
+  getZVtxFromExtrapolation(TAcc const& acc, const Vec3f& primeVtxPos, const Vec3f& hitPos, const Vec3f& candPos) {
     auto sq = [](T x) { return x * x; };
 
-    auto calRDiff2 = [sq](const Vec3d& p1, const Vec3d& p2) { return sq(p2[0] - p1[0]) + sq(p2[1] - p1[1]); };
+    auto calRDiff2 = [sq](const Vec3f& p1, const Vec3f& p2) { return sq(p2[0] - p1[0]) + sq(p2[1] - p1[1]); };
     const T r1Diff = alpaka::math::sqrt(acc, calRDiff2(primeVtxPos, hitPos));
     const T r2Diff = alpaka::math::sqrt(acc, calRDiff2(hitPos, candPos));
 
@@ -60,7 +60,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         float y = sc.scR() * alpaka::math::sin(acc, sc.scSeedTheta()) * alpaka::math::sin(acc, sc.scPhi());
         float z = sc.scR() * alpaka::math::cos(acc, sc.scSeedTheta());
         printf("x: %lf,  y: %lf,  z %lf ", x, z, y);
-        Vec3d position{x, y, z};
+        Vec3f position{x, y, z};
         printf("  Value of perp2 %lf \n", x * x + y * y);
         printf("Calculate the magnetic field with the parabolic approximation at the SC position : %f\n",
                portableParabolicMagneticField::magneticFieldAtPoint(position));
@@ -119,10 +119,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   const int32_t sizeEleSeeds,
                                   reco::SuperClusterDeviceCollection::View viewSCs,
                                   const int32_t sizeSCs,
-                                  const double vtx_x,
-                                  const double vtx_y,
-                                  const double vtx_z) const {
-      const Vec3d vertex(vtx_x, vtx_y, vtx_z);
+                                  const float vtx_x,
+                                  const float vtx_y,
+                                  const float vtx_z) const {
+      const Vec3f vertex(vtx_x, vtx_y, vtx_z);
 
       for (int i : uniform_elements(acc, viewEleSeeds.metadata().size())) {
         auto eleSeed = viewEleSeeds[i];
@@ -131,25 +131,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           continue;
 
         // Access first hit information
-        Vec3d hitPosition(eleSeed.hit0Pos().x(), eleSeed.hit0Pos().y(), eleSeed.hit0Pos().z());
-        Vec3d surfPosition(eleSeed.surf0Pos().x(), eleSeed.surf0Pos().y(), eleSeed.surf0Pos().z());
-        Vec3d surfRotation(eleSeed.surf0Rot().x(), eleSeed.surf0Rot().y(), eleSeed.surf0Rot().z());
+        Vec3f hitPosition(eleSeed.hit0Pos().x(), eleSeed.hit0Pos().y(), eleSeed.hit0Pos().z());
+        Vec3f surfPosition(eleSeed.surf0Pos().x(), eleSeed.surf0Pos().y(), eleSeed.surf0Pos().z());
+        Vec3f surfRotation(eleSeed.surf0Rot().x(), eleSeed.surf0Rot().y(), eleSeed.surf0Rot().z());
 
-        Vec3d hit2Position(eleSeed.hit1Pos().x(), eleSeed.hit1Pos().y(), eleSeed.hit1Pos().z());
-        Vec3d surf2Position(eleSeed.surf1Pos().x(), eleSeed.surf1Pos().y(), eleSeed.surf1Pos().z());
-        Vec3d surf2Rotation(eleSeed.surf1Rot().x(), eleSeed.surf1Rot().y(), eleSeed.surf1Rot().z());
+        Vec3f hit2Position(eleSeed.hit1Pos().x(), eleSeed.hit1Pos().y(), eleSeed.hit1Pos().z());
+        Vec3f surf2Position(eleSeed.surf1Pos().x(), eleSeed.surf1Pos().y(), eleSeed.surf1Pos().z());
+        Vec3f surf2Rotation(eleSeed.surf1Rot().x(), eleSeed.surf1Rot().y(), eleSeed.surf1Rot().z());
 
         for (int j = 0; j < sizeSCs; ++j) {
-          const double x = viewSCs[j].scR() * alpaka::math::sin(acc, viewSCs[j].scSeedTheta()) *
-                           alpaka::math::cos(acc, viewSCs[j].scPhi());
-          const double y = viewSCs[j].scR() * alpaka::math::sin(acc, viewSCs[j].scSeedTheta()) *
-                           alpaka::math::sin(acc, viewSCs[j].scPhi());
-          const double z = viewSCs[j].scR() * alpaka::math::cos(acc, viewSCs[j].scSeedTheta());
+          const float x = viewSCs[j].scR() * alpaka::math::sin(acc, viewSCs[j].scSeedTheta()) *
+                          alpaka::math::cos(acc, viewSCs[j].scPhi());
+          const float y = viewSCs[j].scR() * alpaka::math::sin(acc, viewSCs[j].scSeedTheta()) *
+                          alpaka::math::sin(acc, viewSCs[j].scPhi());
+          const float z = viewSCs[j].scR() * alpaka::math::cos(acc, viewSCs[j].scSeedTheta());
 
           const float et = viewSCs[j].scEnergy() * alpaka::math::sin(acc, viewSCs[j].scSeedTheta());
           const float e = viewSCs[j].scEnergy();
 
-          Vec3d positionSC(x, y, z);
+          Vec3f positionSC(x, y, z);
 
           for (int charge : {1, -1}) {
             const float c = (charge == 1 ? -2.99792458e-3f : +2.99792458e-3f);
@@ -157,26 +157,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             const float bFieldFirst = kUseHitBField ? portableParabolicMagneticField::magneticFieldAtPoint(hitPosition)
                                       : kUseMidpointBField
                                           ? portableParabolicMagneticField::magneticFieldAtPoint(
-                                                Vec3d(0.5 * (positionSC[0] + surfPosition[0]),
+                                                Vec3f(0.5 * (positionSC[0] + surfPosition[0]),
                                                       0.5 * (positionSC[1] + surfPosition[1]),
                                                       0.5 * (positionSC[2] + surfPosition[2])))
                                           : portableParabolicMagneticField::magneticFieldAtPoint(positionSC);
 
             auto newfreeTS = egamma::ftsFromVertexToPoint(acc, positionSC, vertex, e, charge, bFieldFirst);
 
-            const Vec3d position(newfreeTS.get_position());
-            const Vec3d momentum(newfreeTS.get_momentum());
+            const Vec3f position(newfreeTS.get_position());
+            const Vec3f momentum(newfreeTS.get_momentum());
 
             double s = 0;
             bool theSolExists = false;
 
-            Vec3d propagatedPos(0);
-            Vec3d propagatedMom(0);
+            Vec3f propagatedPos(0);
+            Vec3f propagatedMom(0);
 
             double rho = (c * bFieldFirst) / momentum.partial_norm(acc);
 
             // Select propagator by detector ID: BPix -> barrel crossing, FPIX -> forward crossing
-            egamma::Plane<typename Vec3d::value_type> plane(surfPosition, surfRotation);
+            egamma::Plane<typename Vec3f::value_type> plane(surfPosition, surfRotation);
             if (eleSeed.hit0detectorID() == 1) {
               propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::oppositeToMomentum>(
                   acc,
@@ -199,7 +199,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
             propagatedMom *= momentum.norm(acc) / propagatedMom.norm(acc);
 
-            egamma::EleRelPointPairPortable<typename Vec3d::value_type> pair(hitPosition, propagatedPos, vertex);
+            egamma::EleRelPointPairPortable<typename Vec3f::value_type> pair(hitPosition, propagatedPos, vertex);
 
             const float dPhiMax = getCutValue(acc, et, 0.05f, 20.f, -0.002f);
             const float dRZMax = getCutValue(acc, et, 9999.f, 0.f, 0.f);
@@ -211,8 +211,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               continue;
 
             const double zVertex =
-                getZVtxFromExtrapolation<TAcc, typename Vec3d::value_type>(acc, vertex, hitPosition, positionSC);
-            Vec3d vertexUpdated(vertex[0], vertex[1], zVertex);
+                getZVtxFromExtrapolation<TAcc, typename Vec3f::value_type>(acc, vertex, hitPosition, positionSC);
+            Vec3f vertexUpdated(vertex[0], vertex[1], zVertex);
 
             // --- Second hit ---
             if (!(eleSeed.hit1isValid()))
@@ -221,16 +221,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             const float bFieldHit0 = portableParabolicMagneticField::magneticFieldAtPoint(hitPosition);
             auto firstMatchFreeTraj =
                 egamma::ftsFromVertexToPoint(acc, hitPosition, vertexUpdated, e, charge, bFieldHit0);
-            Vec3d position2(firstMatchFreeTraj.get_position());
-            Vec3d momentum2(firstMatchFreeTraj.get_momentum());
+            Vec3f position2(firstMatchFreeTraj.get_position());
+            Vec3f momentum2(firstMatchFreeTraj.get_momentum());
 
             rho = (c * bFieldHit0) / momentum2.partial_norm(acc);
 
             theSolExists = false;
-            propagatedPos = Vec3d(0);
-            propagatedMom = Vec3d(0);
+            propagatedPos = Vec3f(0);
+            propagatedMom = Vec3f(0);
 
-            egamma::Plane<typename Vec3d::value_type> plane2(surf2Position, surf2Rotation);
+            egamma::Plane<typename Vec3f::value_type> plane2(surf2Position, surf2Rotation);
             if (eleSeed.hit1detectorID() == 1) {
               propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                   acc,
@@ -253,7 +253,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
             propagatedMom *= momentum2.norm(acc) / propagatedMom.norm(acc);
 
-            egamma::EleRelPointPairPortable<typename Vec3d::value_type> pair2(
+            egamma::EleRelPointPairPortable<typename Vec3f::value_type> pair2(
                 hit2Position, propagatedPos, vertexUpdated);
 
             const float dPhiMax2 = getCutValue(acc, et, 0.003f, 0.f, 0.f);
@@ -269,15 +269,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             float dPhi3 = 0;
             // --- Third hit (triplet seeds only) ---
             if (eleSeed.nHits() > 2 && eleSeed.hit2isValid()) {
-              Vec3d hit3Position(eleSeed.hit2Pos().x(), eleSeed.hit2Pos().y(), eleSeed.hit2Pos().z());
-              Vec3d surf3Position(eleSeed.surf2Pos().x(), eleSeed.surf2Pos().y(), eleSeed.surf2Pos().z());
-              Vec3d surf3Rotation(eleSeed.surf2Rot().x(), eleSeed.surf2Rot().y(), eleSeed.surf2Rot().z());
+              Vec3f hit3Position(eleSeed.hit2Pos().x(), eleSeed.hit2Pos().y(), eleSeed.hit2Pos().z());
+              Vec3f surf3Position(eleSeed.surf2Pos().x(), eleSeed.surf2Pos().y(), eleSeed.surf2Pos().z());
+              Vec3f surf3Rotation(eleSeed.surf2Rot().x(), eleSeed.surf2Rot().y(), eleSeed.surf2Rot().z());
 
               bool thirdSolExists = false;
-              Vec3d propagatedPos3(0), propagatedMom3(0);
+              Vec3f propagatedPos3(0), propagatedMom3(0);
               double s3 = 0;
 
-              egamma::Plane<typename Vec3d::value_type> plane3(surf3Position, surf3Rotation);
+              egamma::Plane<typename Vec3f::value_type> plane3(surf3Position, surf3Rotation);
               if (eleSeed.hit2detectorID() == 1) {
                 propagators::helixBarrelPlaneCrossing<TAcc, propagators::PropagationDirection::alongMomentum>(
                     acc,
@@ -298,7 +298,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               if (!thirdSolExists)
                 continue;
 
-              egamma::EleRelPointPairPortable<typename Vec3d::value_type> pair3(
+              egamma::EleRelPointPairPortable<typename Vec3f::value_type> pair3(
                   hit3Position, propagatedPos3, vertexUpdated);
 
               const float dPhiMax3 = getCutValue(acc, et, 0.003f, 0.f, 0.f);
@@ -348,9 +348,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void PixelMatchingAlgo::matchSeeds(Queue& queue,
                                      reco::ElectronSeedDeviceCollection& collection,
                                      reco::SuperClusterDeviceCollection& collectionSCs,
-                                     double vtx_X,
-                                     double vtx_Y,
-                                     double vtx_Z) const {
+                                     float vtx_X,
+                                     float vtx_Y,
+                                     float vtx_Z) const {
     uint32_t items = 32;
     auto nSeeds = static_cast<uint32_t>(collection->metadata().size());
     uint32_t groups = divide_up_by(nSeeds, items);

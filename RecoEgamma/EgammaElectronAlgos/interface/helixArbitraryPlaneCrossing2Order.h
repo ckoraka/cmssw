@@ -11,13 +11,13 @@
 
 #include "DataFormats/EgammaReco/interface/alpaka/Phys3DVector.h"
 
-using Vec3d = cms::alpakatools::math::Phys3DVector<double>;
+using Vec3f = cms::alpakatools::math::Phys3DVector<float>;
 
 namespace propagators {
 
   namespace planeCrossing2Order {
 
-    constexpr inline Vec3d positionInDouble(const double theRho,
+    constexpr inline Vec3f positionInDouble(const double theRho,
                                             const double s,
                                             const double x0,
                                             const double y0,
@@ -28,7 +28,7 @@ namespace propagators {
                                             const double sinThetaI) {
       const double st = s / sinThetaI;
 
-      Vec3d res;
+      Vec3f res;
 
       res[0] = x0 + (cosPhi0 - (st * 0.5 * theRho) * sinPhi0) * st;
       res[1] = y0 + (sinPhi0 + (st * 0.5 * theRho) * cosPhi0) * st;
@@ -37,7 +37,7 @@ namespace propagators {
       return res;
     }
 
-    constexpr inline Vec3d directionInDouble(const double theRho,
+    constexpr inline Vec3f directionInDouble(const double theRho,
                                              const double s,
                                              const double cosPhi0,
                                              const double sinPhi0,
@@ -45,7 +45,7 @@ namespace propagators {
                                              const double sinThetaI) {
       const double dph = s * theRho / sinThetaI;
 
-      Vec3d res;
+      Vec3f res;
 
       res[0] = cosPhi0 - (sinPhi0 + 0.5 * dph * cosPhi0) * dph;
       res[1] = sinPhi0 + (cosPhi0 - 0.5 * dph * sinPhi0) * dph;
@@ -97,14 +97,14 @@ namespace propagators {
   template <typename TAcc, PropagationDirection propDir>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void helixArbitraryPlaneCrossing2Order(
       TAcc const& acc,
-      const Vec3d& point,
-      const Vec3d& direction,
+      const Vec3f& point,
+      const Vec3f& direction,
       const float curvature,
-      const egamma::Plane<typename Vec3d::value_type> plane,
+      const egamma::Plane<typename Vec3f::value_type> plane,
       double& pathLength,
       bool& validPath,
-      Vec3d& position,
-      Vec3d& directionOut) {
+      Vec3f& position,
+      Vec3f& directionOut) {
     const double theX0 = point[0];
     const double theY0 = point[1];
     const double theZ0 = point[2];
@@ -121,7 +121,7 @@ namespace propagators {
     const double theSinThetaI = pt2 * ptI * pI;
 
     // Get normal vector of the plane
-    const Vec3d normalToPlane = plane.normalVector();
+    const Vec3f normalToPlane = plane.normalVector();
 
     const double nPx = normalToPlane[0];
     const double nPy = normalToPlane[1];

@@ -6,7 +6,7 @@
 
 namespace egamma {
 
-  template <typename T = double>
+  template <typename T = float>
   class Plane {
   public:
     using Vec3 = cms::alpakatools::math::Phys3DVector<T>;

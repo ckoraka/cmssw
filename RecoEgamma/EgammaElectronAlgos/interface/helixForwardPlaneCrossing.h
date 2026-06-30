@@ -14,9 +14,9 @@ namespace propagators {
   // ---------------------------------------------------------
   //  Position of helix after path-length s
   // ---------------------------------------------------------
-  constexpr Vec3d positionInHelix(const bool select,
+  constexpr Vec3f positionInHelix(const bool select,
                                   const double s,
-                                  const Vec3d& point,
+                                  const Vec3f& point,
                                   const double rho,
                                   const double cosPhi0,
                                   const double sinPhi0,
@@ -27,12 +27,12 @@ namespace propagators {
                                   const double cachedCDPhi) {
     if (select) {
       const double o = 1.0 / rho;
-      return Vec3d(point[0] + (-sinPhi0 * (1.0 - cachedCDPhi) + cosPhi0 * cachedSDPhi) * o,
+      return Vec3f(point[0] + (-sinPhi0 * (1.0 - cachedCDPhi) + cosPhi0 * cachedSDPhi) * o,
                    point[1] + (cosPhi0 * (1.0 - cachedCDPhi) + sinPhi0 * cachedSDPhi) * o,
                    point[2] + s * cosTheta);
     } else {
       const double st = cachedS * sinTheta;
-      return Vec3d(point[0] + (cosPhi0 - st * 0.5 * rho * sinPhi0) * st,
+      return Vec3f(point[0] + (cosPhi0 - st * 0.5 * rho * sinPhi0) * st,
                    point[1] + (sinPhi0 + st * 0.5 * rho * cosPhi0) * st,
                    point[2] + st * cosTheta / sinTheta);
     }
@@ -41,7 +41,7 @@ namespace propagators {
   // ---------------------------------------------------------
   //  Direction of helix after path-length s
   // ---------------------------------------------------------
-  constexpr Vec3d directionInHelix(const bool select,
+  constexpr Vec3f directionInHelix(const bool select,
                                    const double s,
                                    const double rho,
                                    const double cosPhi0,
@@ -51,12 +51,12 @@ namespace propagators {
                                    const double cachedSDPhi,
                                    const double cachedCDPhi) {
     if (select) {
-      return Vec3d(cosPhi0 * cachedCDPhi - sinPhi0 * cachedSDPhi,
+      return Vec3f(cosPhi0 * cachedCDPhi - sinPhi0 * cachedSDPhi,
                    sinPhi0 * cachedCDPhi + cosPhi0 * cachedSDPhi,
                    cosTheta / sinTheta);
     } else {
       const double dph = s * rho * sinTheta;
-      return Vec3d(cosPhi0 - (sinPhi0 + 0.5 * cosPhi0 * dph) * dph,
+      return Vec3f(cosPhi0 - (sinPhi0 + 0.5 * cosPhi0 * dph) * dph,
                    sinPhi0 + (cosPhi0 - 0.5 * sinPhi0 * dph) * dph,
                    cosTheta / sinTheta);
     }
@@ -68,13 +68,13 @@ namespace propagators {
   template <typename TAcc, PropagationDirection propDir>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void helixForwardPlaneCrossing(
       TAcc const& acc,
-      const Vec3d& point,
-      const Vec3d& direction,
+      const Vec3f& point,
+      const Vec3f& direction,
       const float curvature,
-      const egamma::Plane<typename Vec3d::value_type> plane,
+      const egamma::Plane<typename Vec3f::value_type> plane,
       double& pathLength,
-      Vec3d& position,
-      Vec3d& dir,
+      Vec3f& position,
+      Vec3f& dir,
       bool& solExists) {
     double cachedS = 0.;
     double cachedDPhi = 0.;

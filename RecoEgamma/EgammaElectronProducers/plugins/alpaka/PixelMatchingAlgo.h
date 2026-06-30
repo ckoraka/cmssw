@@ -14,9 +14,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     void matchSeeds(Queue& queue,
                     reco::ElectronSeedDeviceCollection& collection,
                     reco::SuperClusterDeviceCollection& collectionSCs,
-                    double vtx_X,
-                    double vtx_Y,
-                    double vtx_Z) const;
+                    float vtx_X,
+                    float vtx_Y,
+                    float vtx_Z) const;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

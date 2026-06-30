@@ -19,9 +19,9 @@ namespace propagators {
   constexpr float theMaxDistToPlane = 1.e-4f;
 
   template <typename TAcc>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE Vec3d positionInDouble(TAcc const& acc,
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE Vec3f positionInDouble(TAcc const& acc,
                                                              const double s,
-                                                             const Vec3d& point,
+                                                             const Vec3f& point,
                                                              const double rho,
                                                              const double cosPhi0,
                                                              const double sinPhi0,
@@ -32,7 +32,7 @@ namespace propagators {
                                                              double& theCachedDPhi,
                                                              double& theCachedSDPhi,
                                                              double& theCachedCDPhi) {
-    Vec3d res;
+    Vec3f res;
 
     if (s != theCachedS) {
       theCachedS = s;
@@ -57,9 +57,9 @@ namespace propagators {
   }
 
   template <typename TAcc>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE Vec3d directionInDouble(TAcc const& acc,
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE Vec3f directionInDouble(TAcc const& acc,
                                                               const double s,
-                                                              const Vec3d& point,
+                                                              const Vec3f& point,
                                                               const double rho,
                                                               const double cosPhi0,
                                                               const double sinPhi0,
@@ -70,7 +70,7 @@ namespace propagators {
                                                               double& theCachedDPhi,
                                                               double& theCachedSDPhi,
                                                               double& theCachedCDPhi) {
-    Vec3d res;
+    Vec3f res;
 
     //
     // Calculate delta phi (if not already available)
@@ -100,8 +100,8 @@ namespace propagators {
 
   template <typename TAcc>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE bool notAtSurface(TAcc const& acc,
-                                                        const egamma::Plane<typename Vec3d::value_type>& plane,
-                                                        const Vec3d& point,
+                                                        const egamma::Plane<typename Vec3f::value_type>& plane,
+                                                        const Vec3f& point,
                                                         const float maxDist) {
     const float dz = static_cast<float>(plane.localZ(point));
     return alpaka::math::abs(acc, dz) > maxDist;
@@ -110,13 +110,13 @@ namespace propagators {
   template <typename TAcc, PropagationDirection propDir>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void helixArbitraryPlaneCrossing(
       TAcc const& acc,
-      const Vec3d& point,
-      const Vec3d& direction,
+      const Vec3f& point,
+      const Vec3f& direction,
       const float curvature,
-      const egamma::Plane<typename Vec3d::value_type> plane,
+      const egamma::Plane<typename Vec3f::value_type> plane,
       double& pathLength,
-      Vec3d& position,
-      Vec3d& dir,
+      Vec3f& position,
+      Vec3f& dir,
       bool& solExists) {
     double theCachedS = 0.;
     double theCachedDPhi = 0.;
@@ -159,8 +159,8 @@ namespace propagators {
     double pathLength2O = 0;
     bool validPath2O = false;
 
-    Vec3d position2O(0.);
-    Vec3d directionOut2O(0.);
+    Vec3f position2O(0.);
+    Vec3f directionOut2O(0.);
 
     helixArbitraryPlaneCrossing2Order<TAcc, propDir>(
         acc, point, direction, curvature, plane, pathLength2O, validPath2O, position2O, directionOut2O);
@@ -171,7 +171,7 @@ namespace propagators {
       return;
     }
 
-    Vec3d xnew = positionInDouble(acc,
+    Vec3f xnew = positionInDouble(acc,
                                   pathLength2O,
                                   point,
                                   curvature,
@@ -211,7 +211,7 @@ namespace propagators {
         return;
       }
 
-      Vec3d pnew = directionInDouble(acc,
+      Vec3f pnew = directionInDouble(acc,
                                      pathLength,
                                      point,
                                      curvature,
@@ -228,8 +228,8 @@ namespace propagators {
       double tmpPathLength = 0.;
       bool tmpValidPath = false;
       //
-      Vec3d tmpPosition(0.);
-      Vec3d tmpDirectionOut(0.);
+      Vec3f tmpPosition(0.);
+      Vec3f tmpDirectionOut(0.);
 
       // Originally it passes the theSinTheta
       helixArbitraryPlaneCrossing2Order<TAcc, propagators::PropagationDirection::anyDirection>(

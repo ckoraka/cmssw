@@ -11,7 +11,7 @@
 
 namespace egamma {
 
-  template <typename T = double>
+  template <typename T = float>
   class EleRelPointPairPortable {
   public:
     using Vec3 = cms::alpakatools::math::Phys3DVector<T>;
@@ -44,7 +44,7 @@ namespace egamma {
       const T pdiff = alpaka::math::sqrt(acc, tmp);
       const T z = p[2] - origin[2];
 
-      return 0.5 * alpaka::math::log(acc, (pdiff + z) / (pdiff - z));
+      return T(0.5) * alpaka::math::log(acc, (pdiff + z) / (pdiff - z));
     }
 
     // Calculate relative phi
@@ -57,10 +57,10 @@ namespace egamma {
     // Normalize phi to the range [-pi, pi]
     template <typename TAcc>
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE T reduceRange(TAcc const& acc, const T x) const {
-      constexpr T o2pi = 1. / (2. * M_PI);
+      constexpr T o2pi = T(1) / (T(2) * T(M_PI));
       if (alpaka::math::abs(acc, x) <= T(M_PI))
         return x;
-      return x - alpaka::math::floor(acc, x * o2pi + (x < 0 ? -0.5 : 0.5)) * 2. * M_PI;
+      return x - alpaka::math::floor(acc, x * o2pi + (x < 0 ? T(-0.5) : T(0.5))) * T(2) * T(M_PI);
     }
 
     template <typename TAcc>
